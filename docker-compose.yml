@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  crypto-engine:
+    build: ./crypto-engine
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./crypto-engine/.env.example
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./api-gateway/.env.example
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.example
