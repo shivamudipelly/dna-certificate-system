@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     AES_KEY: str = Field(..., description="32-byte Base64 encoded AES key")
     DNA_SECRET_KEY: str = Field(..., description="256 character A/T/C/G string")
     LOGISTIC_MAP_R: float = Field(default=3.99, description="Chaotic parameter r")
+    ENGINE_API_KEY: str = Field(..., description="API Key for validating requests from Gateway")
     
     model_config = SettingsConfigDict(
         env_file=".env",

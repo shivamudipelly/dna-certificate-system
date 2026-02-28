@@ -7,7 +7,8 @@ export const configureEnvironment = () => {
         'MONGO_URI',
         'JWT_SECRET',
         'CRYPTO_ENGINE_URL',
-        'FRONTEND_URL'
+        'FRONTEND_URL',
+        'ENGINE_API_KEY'
     ];
 
     const missingVars = requiredVars.filter((v) => !process.env[v]);
@@ -22,6 +23,7 @@ export const configureEnvironment = () => {
         mongoUri: process.env.MONGO_URI,
         jwtSecret: process.env.JWT_SECRET,
         cryptoEngineUrl: process.env.CRYPTO_ENGINE_URL,
-        frontendUrl: process.env.FRONTEND_URL
+        frontendUrl: process.env.FRONTEND_URL,
+        engineApiKey: process.env.ENGINE_API_KEY
     };
 };

@@ -14,7 +14,7 @@ export const pythonService = {
                 { data: data }, // Match the EncryptRequest payload structure: { payload: { data } } wait the Python main expects: payload: { data: {} } ? No it expects {"data": {...}}
                 {
                     headers: {
-                        'x-api-key': 'gateway-secret-token',
+                        'x-api-key': config.engineApiKey,
                         'Content-Type': 'application/json'
                     },
                     timeout: 30000 // 30-Seconds hard-stop
@@ -49,7 +49,7 @@ export const pythonService = {
                 },
                 {
                     headers: {
-                        'x-api-key': 'gateway-secret-token',
+                        'x-api-key': config.engineApiKey,
                         'Content-Type': 'application/json'
                     },
                     timeout: 30000 // 30-Seconds hard-stop

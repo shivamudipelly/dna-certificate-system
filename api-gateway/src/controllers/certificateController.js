@@ -3,6 +3,7 @@ import Certificate from '../models/Certificate.js';
 import { pythonService } from '../services/pythonService.js';
 import { qrService } from '../services/qrService.js';
 import { validationResult } from 'express-validator';
+import { auditLog, logger } from '../utils/logger.js';
 
 /**
  * Handle validation errors from express-validator universally
@@ -31,7 +32,7 @@ export const issueCertificate = async (req, res, next) => {
 
         // 1. Send purely to Python Engine
         // No local state preservation of structural inputs mapping. Total architecture safety.
-        console.log(`[Cert Controller] Sending payload to Crypto Engine...`);
+        logger.info(`[Cert Controller] Sending payload to Crypto Engine... [ReqID: ${req.id}]`);
         const { dna_payload, chaotic_seed } = await pythonService.encryptCertificate(certificateData);
 
         // 2. Build local tracker representations
@@ -48,7 +49,7 @@ export const issueCertificate = async (req, res, next) => {
         const verification_url = qrService.getVerificationUrl(public_id);
         const qr_code = await qrService.generateQRCode(verification_url);
 
-        console.info(`[Issuance Event] New Certificate Created: ${public_id} Issuer: ${req.admin._id}`);
+        auditLog('CERT_ISSUE', req.id, 201, `New Certificate Created: ${public_id} Issuer: ${req.admin._id}`, req.ip, req.get('User-Agent'));
 
         res.status(201).json({
             success: true,
@@ -70,12 +71,12 @@ export const verifyCertificate = async (req, res, next) => {
         const certificate = await Certificate.findOne({ public_id });
 
         if (!certificate) {
-            console.warn(`[Verification Alert] Lookup Failed - Target Missing: ${public_id} IP: ${req.ip}`);
+            auditLog('CERT_VERIFY_404', req.id, 404, `Lookup Failed - Target Missing: ${public_id}`, req.ip, req.get('User-Agent'));
             return res.status(404).json({ success: false, error: 'Certificate not found' });
         }
 
         if (certificate.status === 'revoked') {
-            console.warn(`[Verification Alert] Revoked Access Blocked: ${public_id} IP: ${req.ip}`);
+            auditLog('CERT_VERIFY_403', req.id, 403, `Revoked Access Blocked: ${public_id}`, req.ip, req.get('User-Agent'));
             return res.status(403).json({ success: false, error: 'REVOKED' });
         }
 
@@ -92,7 +93,7 @@ export const verifyCertificate = async (req, res, next) => {
             certificate.last_verified_at = Date.now();
             await certificate.save();
 
-            console.info(`[Verification Success] Decrypt Clean - Sequence Valid: ${public_id}`);
+            auditLog('CERT_VERIFY_SUCCESS', req.id, 200, `Decrypt Clean - Sequence Valid: ${public_id}`, req.ip, req.get('User-Agent'));
 
             res.status(200).json({
                 success: true,
@@ -103,7 +104,7 @@ export const verifyCertificate = async (req, res, next) => {
         } catch (cryptoError) {
             // Hard Tamper Block Event Router
             if (cryptoError.status === 403 && cryptoError.message === 'TAMPERED') {
-                console.error(`💥 [CRITICAL THREAT] Database Data Tampering Detected! ${public_id}`);
+                auditLog('CERT_TAMPERED', req.id, 403, `CRITICAL THREAT Database Data Tampering Detected! ${public_id}`, req.ip, req.get('User-Agent'));
                 return res.status(403).json({ success: false, error: 'TAMPERED' });
             }
             throw cryptoError;
@@ -156,7 +157,7 @@ export const revokeCertificate = async (req, res, next) => {
         certificate.status = 'revoked';
         await certificate.save();
 
-        console.warn(`[Access Event] Administrator ${req.admin._id} actively revoked Certificate ${public_id}`);
+        auditLog('CERT_REVOKE', req.id, 200, `Administrator ${req.admin._id} actively revoked Certificate ${public_id}`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({
             success: true,

@@ -86,7 +86,7 @@ async def security_middleware(request: Request, call_next):
         )
 
 # Simple API Key validation
-API_KEY_SECRET = "gateway-secret-token" # In production, this goes to .env
+API_KEY_SECRET = settings.ENGINE_API_KEY
 
 api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
 

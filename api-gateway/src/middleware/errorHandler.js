@@ -1,9 +1,18 @@
-export const errorHandler = (err, req, res, next) => {
-    console.error(`[Error] ${req.id} - ${err.message}`);
+import { logger } from '../utils/logger.js';
 
-    // Defaulting Error Payload - Stripts Stack Traces
-    const statusCode = err.statusCode || 500;
-    const message = err.message || 'Internal Server Error';
+export const errorHandler = (err, req, res, next) => {
+    // Log complete stack traces server side
+    logger.error(`[Error] ${req.id} - ${err.message}`, {
+        stack: err.stack,
+        requestId: req.id,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+    });
+
+    const statusCode = err.status || err.statusCode || 500;
+
+    // Sanitize 500s completely to prevent internal metric leaking
+    const message = statusCode === 500 ? 'Internal Server Error' : (err.message || 'Internal Server Error');
 
     res.status(statusCode).json({
         success: false,

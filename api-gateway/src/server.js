@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { configureEnvironment } from './config/index.js';
 import { connectDB } from './config/database.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { logger, auditLog } from './utils/logger.js';
 import authRoutes from './routes/authRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
 
@@ -19,7 +20,16 @@ connectDB(config.mongoUri);
 const app = express();
 
 // 4. Security & Logging Middlewares
-app.use(helmet()); // Apply Security Headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
+        },
+    },
+}));
 
 // Add request ID and basic response time tracking
 app.use((req, res, next) => {
@@ -27,7 +37,22 @@ app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - start;
-        console.log(`[${req.id}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
+        logger.info(`[${req.id}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
+    });
+    next();
+});
+
+// Hard 30-Second Request Timeout Limits
+app.use((req, res, next) => {
+    req.setTimeout(30000, () => {
+        logger.warn(`Request timeout reached [ID: ${req.id}]`);
+        return res.status(408).json({ success: false, error: 'Request Timeout Exceeded max 30s' });
+    });
+    res.setTimeout(30000, () => {
+        logger.warn(`Response timeout reached [ID: ${req.id}]`);
+        if (!res.headersSent) {
+            return res.status(503).json({ success: false, error: 'Service Unavailable Timeout Exceeded max 30s' });
+        }
     });
     next();
 });
@@ -80,5 +105,5 @@ app.use(errorHandler);
 
 // 7. Start Server
 app.listen(config.port, () => {
-    console.log(`🚀 API Gateway securely running on port ${config.port}`);
+    logger.info(`🚀 API Gateway securely running on port ${config.port}`);
 });

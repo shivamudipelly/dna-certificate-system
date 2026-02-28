@@ -1,0 +1,33 @@
+# ── Frontend (React / Vite) ────────────────────────────────
+# Dependencies (rebuilt inside container via npm ci)
+node_modules/
+npm-debug.log*
+
+# Existing dist (builder stage creates a fresh one)
+dist/
+build/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Test artifacts
+tests/
+coverage/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Nginx config is copied explicitly — public dir handled by builder
+# (nothing else to exclude for production)

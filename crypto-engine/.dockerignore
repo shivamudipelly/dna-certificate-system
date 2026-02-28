@@ -1,0 +1,32 @@
+# ── Python / Crypto Engine ─────────────────────────────────
+# Virtual env and bytecode
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# Secrets — never commit real env
+.env
+.env.*
+!.env.example
+
+# Test artifacts
+tests/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore

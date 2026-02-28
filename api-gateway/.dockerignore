@@ -1,0 +1,30 @@
+# ── Node.js / API Gateway ──────────────────────────────────
+# Dependencies (rebuilt inside container)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Secrets — never commit real env
+.env
+.env.*
+!.env.example
+
+# Test artifacts & coverage
+tests/
+coverage/
+.nyc_output/
+
+# Build / dist
+dist/
+build/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore

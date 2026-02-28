@@ -1,0 +1,81 @@
+# ==============================================================
+# Render.com — DNA Certificate System
+# Defines 2 services:
+#   1. api-gateway   (public web service — Node 18)
+#   2. crypto-engine (private service — Python 3.11)
+#
+# Set environment variables under each service's "Environment"
+# tab in the Render dashboard, or use an Env Group.
+#
+# Docs: https://render.com/docs/yaml-spec
+# ==============================================================
+
+services:
+
+  # ── 1. API Gateway (public — accessible from the internet) ──
+  - type: web
+    name: dna-api-gateway
+    runtime: node
+    region: oregon
+    plan: free
+
+    # Root of the repo where the service lives
+    rootDir: api-gateway
+
+    buildCommand: npm ci --only=production
+    startCommand: node src/server.js
+
+    # Automatically deploy when main branch is pushed
+    autoDeploy: true
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      # Set real values in the Render dashboard (not here)
+      - key: MONGO_URI
+        sync: false   # Populated in Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: ENGINE_API_KEY
+        sync: false
+      # Internal URL to reach the crypto-engine private service
+      # Render provides an internal hostname for private services:
+      # https://render.com/docs/private-services
+      - key: CRYPTO_ENGINE_URL
+        fromService:
+          name: dna-crypto-engine
+          type: pserv
+          property: hostport
+      - key: FRONTEND_URL
+        sync: false   # e.g. https://your-app.vercel.app
+
+  # ── 2. Crypto Engine (private — internal only) ──────────────
+  - type: pserv          # "pserv" = private service (not public)
+    name: dna-crypto-engine
+    runtime: python
+    region: oregon
+    plan: free
+
+    rootDir: crypto-engine
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+
+    autoDeploy: true
+
+    envVars:
+      - key: PORT
+        value: "8000"
+      # Set real values in the Render dashboard
+      - key: AES_KEY
+        sync: false
+      - key: DNA_SECRET_KEY
+        sync: false
+      - key: LOGISTIC_MAP_R
+        value: "3.99"
+      - key: ENGINE_API_KEY
+        sync: false

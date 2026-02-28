@@ -1,5 +1,6 @@
 import Admin from '../models/Admin.js';
 import { tokenService } from '../services/tokenService.js';
+import { auditLog } from '../utils/logger.js';
 
 /**
  * Custom Error wrapper to enforce strictly 400 Bad Request error standards cleanly
@@ -71,13 +72,13 @@ export const login = async (req, res, next) => {
         const admin = await Admin.findByEmail(email);
 
         if (!admin) {
-            console.warn(`[Failed Login] Invalid email target: ${email} IP: ${req.ip}`);
+            auditLog('AUTH_FAILED', req.id, 401, `Invalid email attempt target: ${email}`, req.ip, req.get('User-Agent'));
             return sendError(res, 401, 'Invalid credentials');
         }
 
         const isMatch = await admin.comparePassword(password);
         if (!isMatch) {
-            console.warn(`[Failed Login] Invalid password for target: ${email} IP: ${req.ip}`);
+            auditLog('AUTH_FAILED', req.id, 401, `Invalid password attempt for target: ${email}`, req.ip, req.get('User-Agent'));
             return sendError(res, 401, 'Invalid credentials');
         }
 
@@ -88,7 +89,7 @@ export const login = async (req, res, next) => {
         admin.lastLogin = Date.now();
         await admin.save({ validateBeforeSave: false }); // Skip extra structural validations on login hook
 
-        console.info(`[Auth Success] Admin logged in: ${admin.email} IP: ${req.ip}`);
+        auditLog('AUTH_SUCCESS', req.id, 200, `Admin logged in successfully: ${admin.email}`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({
             success: true,

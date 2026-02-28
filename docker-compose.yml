@@ -1,40 +1,104 @@
+# ==============================================================
+# DNA Certificate System — docker-compose.yml
+# 3 services: crypto-engine (Python/FastAPI), api-gateway
+# (Node/Express), frontend (nginx/React)
+#
+# MongoDB: Use Atlas (external). No local Mongo container.
+# Set MONGO_URI in api-gateway/.env pointing to your Atlas cluster.
+#
+# Usage:
+#   Development:  docker-compose up
+#   Production:   docker-compose -f docker-compose.yml up -d
+#   Rebuild:      docker-compose build --no-cache
+# ==============================================================
+
 version: '3.8'
 
 services:
+
+  # ── 1. Crypto Engine (FastAPI / Python 3.11) ──────────────
   crypto-engine:
     build:
       context: ./crypto-engine
       dockerfile: Dockerfile
     container_name: dna_crypto_engine
-    restart: always
+    restart: on-failure
+    # NOTE: In production remove the ports section — this
+    # service should ONLY be reachable by api-gateway internally
     ports:
       - "8000:8000"
     env_file:
       - ./crypto-engine/.env
     networks:
       - dna_network
+    volumes:
+      # Dev hot-reload: mount source over container copy
+      # Remove in production (image already bakes in the code)
+      - ./crypto-engine/app:/app/app:ro
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
+      start_period: 15s
       retries: 3
 
+  # ── 2. API Gateway (Express / Node 18) ─────────────────────
   api-gateway:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
     container_name: dna_api_gateway
-    restart: always
+    restart: on-failure
     ports:
       - "5000:5000"
     env_file:
       - ./api-gateway/.env
+    environment:
+      # Override so the gateway always finds the engine by
+      # Docker service name (not localhost) on the shared network
+      CRYPTO_ENGINE_URL: http://crypto-engine:8000
+      NODE_ENV: production
     depends_on:
       crypto-engine:
         condition: service_healthy
     networks:
       - dna_network
+    volumes:
+      - ./api-gateway/src:/app/src:ro
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:5000/health" ]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
 
+  # ── 3. Frontend (nginx serving Vite/React build) ───────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # API URL the browser uses — must be the public API Gateway URL
+        # For local dev it's localhost:5000; override for production
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    container_name: dna_frontend
+    restart: on-failure
+    ports:
+      - "80:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - dna_network
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost/nginx-health" ]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+
+# ── Shared network ─────────────────────────────────────────────
 networks:
   dna_network:
     driver: bridge
+    name: dna_network
