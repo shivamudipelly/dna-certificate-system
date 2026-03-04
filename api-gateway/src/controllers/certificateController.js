@@ -1,5 +1,7 @@
+import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import Certificate from '../models/Certificate.js';
+import AuditLog from '../models/AuditLog.js';
 import { pythonService } from '../services/pythonService.js';
 import { qrService } from '../services/qrService.js';
 import { validationResult } from 'express-validator';
@@ -26,6 +28,7 @@ export const issueCertificate = async (req, res, next) => {
             name: req.body.name,
             roll: req.body.roll,
             degree: req.body.degree,
+            department: req.body.department,
             cgpa: req.body.cgpa,
             year: req.body.year
         };
@@ -35,13 +38,21 @@ export const issueCertificate = async (req, res, next) => {
         logger.info(`[Cert Controller] Sending payload to Crypto Engine... [ReqID: ${req.id}]`);
         const { dna_payload, chaotic_seed } = await pythonService.encryptCertificate(certificateData);
 
+        // 1.5 Generate standard independent SHA-256 for mathematical validation proof
+        // We hash purely the strict subset of data that matters to the user verification layer
+        const hashPayloadString = `${certificateData.name}|${certificateData.roll}|${certificateData.degree}|${certificateData.department}|${certificateData.cgpa}|${certificateData.year}`;
+        const certificate_hash = crypto.createHash('sha256').update(hashPayloadString).digest('hex');
+
         // 2. Build local tracker representations
         const public_id = uuidv4().replace(/-/g, '').substring(0, 10); // 10-char alphanumeric subset 
 
         const cert = await Certificate.create({
             public_id,
+            student_name: certificateData.name,
+            roll_number: certificateData.roll,
             dna_payload,
             chaotic_seed,
+            certificate_hash,
             issued_by: req.admin._id
         });
 
@@ -88,17 +99,55 @@ export const verifyCertificate = async (req, res, next) => {
                 certificate.chaotic_seed
             );
 
+            // 2.5 Recalculate Hash from Decrypted Data and MATCH
+            const hashPayloadString = `${decryptedData.name}|${decryptedData.roll}|${decryptedData.degree}|${decryptedData.department}|${decryptedData.cgpa}|${decryptedData.year}`;
+            const recalculatedHash = crypto.createHash('sha256').update(hashPayloadString).digest('hex');
+
+            if (recalculatedHash !== certificate.certificate_hash) {
+                auditLog('CERT_TAMPERED', req.id, 403, `CRITICAL THREAT Hash Data Tampering Detected! ${public_id}`, req.ip, req.get('User-Agent'));
+                await AuditLog.create({
+                    action: 'CERT_TAMPERED',
+                    targetId: public_id,
+                    details: 'SHA-256 Hash check severely mismatched the decoded plaintext against original DB issuance record.',
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent')
+                });
+                return res.status(403).json({ success: false, error: 'TAMPERED: The cryptographic hash bounds were broken.' });
+            }
+
             // 3. Mathematical Success -> Update Live Meta Properties
+            await Certificate.updateOne(
+                { _id: certificate._id },
+                {
+                    $inc: { verification_count: 1 },
+                    $set: { last_verified_at: Date.now() }
+                }
+            );
+
+            // Keep local object in sync for logging
             certificate.verification_count += 1;
             certificate.last_verified_at = Date.now();
-            await certificate.save();
 
             auditLog('CERT_VERIFY_SUCCESS', req.id, 200, `Decrypt Clean - Sequence Valid: ${public_id}`, req.ip, req.get('User-Agent'));
+
+            // General Audience Log
+            await AuditLog.create({
+                action: 'VERIFY_SCAN',
+                targetId: public_id,
+                details: `Public user verified certificate data correctly. Count: ${certificate.verification_count}`,
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent')
+            });
+
+            const verification_url = qrService.getVerificationUrl(public_id);
+            const qr_code = await qrService.generateQRCode(verification_url);
 
             res.status(200).json({
                 success: true,
                 data: decryptedData,
-                verified_at: certificate.last_verified_at
+                verified_at: certificate.last_verified_at,
+                qr_code,
+                verification_url
             });
 
         } catch (cryptoError) {
@@ -121,14 +170,18 @@ export const getAdminCertificates = async (req, res, next) => {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = 20;
 
-        // Ensure we isolate viewing specifically to the tracking object creator
-        const certificates = await Certificate.find({ issued_by: req.admin._id })
+        // HODs and SuperAdmins should see the certificate registry.
+        // PII is secure because dna_payload is excluded. 
+        // We don't filter by issued_by because SuperAdmins issue the certs, which would hide them from HODs.
+        const query = {}; // Return all certificates (metadata only)
+
+        const certificates = await Certificate.find(query)
             .select('-dna_payload') // EXPLICIT OVERRIDE: NEVER leak the DNA to the user portal lists
             .skip((page - 1) * limit)
             .limit(limit)
             .sort({ issued_at: -1 });
 
-        const total = await Certificate.countDocuments({ issued_by: req.admin._id });
+        const total = await Certificate.countDocuments(query);
 
         res.status(200).json({
             success: true,

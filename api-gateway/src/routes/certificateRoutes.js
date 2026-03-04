@@ -26,6 +26,7 @@ const certificateValidators = [
     body('name').trim().notEmpty().escape().withMessage('Name is required and must not contain executable symbols'),
     body('roll').trim().notEmpty().escape().withMessage('Roll number is required'),
     body('degree').trim().notEmpty().escape().withMessage('Degree is required'),
+    body('department').trim().notEmpty().escape().withMessage('Department is required'),
     body('cgpa').trim().notEmpty().escape().isFloat({ min: 0, max: 10 }).withMessage('CGPA must be a standard float between 0 and 10'),
     body('year').trim().notEmpty().escape().isInt({ min: 1990, max: 2100 }).withMessage('Must be a valid graduation year range')
 ];
@@ -35,8 +36,8 @@ const certificateValidators = [
  * 🔒 PROTECTED AUTHENTICATED ROUTES
  */
 
-// POST /api/certificates - Admin & SuperAdmin can issue
-router.post('/', protect, certificateValidators, issueCertificate);
+// POST /api/certificates - Only HOD & SuperAdmin can issue certificates (Clerks are strictly view-only).
+router.post('/', protect, authorize('HOD', 'SuperAdmin'), certificateValidators, issueCertificate);
 
 // GET /api/certificates - Current Admin lists only their certificates
 router.get('/', protect, getAdminCertificates);

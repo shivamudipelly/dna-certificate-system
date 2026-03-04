@@ -27,6 +27,8 @@ export interface DecryptedMetadata {
 
 export interface Certificate {
     public_id: string;
+    student_name?: string;
+    roll_number?: string;
     status: CertificateStatus;
     issued_at: string;
     issued_by: string; // Admin reference ID

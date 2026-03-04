@@ -165,4 +165,17 @@ export const Icons = {
             <polyline points="5 8 10 13 15 8" />
         </svg>
     ),
+    X: () => (
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    ),
+    Download: () => (
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="5 10 10 15 15 10" />
+            <line x1="10" y1="15" x2="10" y2="3" />
+            <line x1="4" y1="17" x2="16" y2="17" />
+        </svg>
+    ),
 };

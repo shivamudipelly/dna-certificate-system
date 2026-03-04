@@ -9,6 +9,14 @@ const CertificateSchema = new mongoose.Schema({
         minlength: 10,
         maxlength: 10
     },
+    student_name: {
+        type: String,
+        required: [true, 'Student Name is required for registry tracking']
+    },
+    roll_number: {
+        type: String,
+        required: [true, 'Roll Number is required for registry tracking']
+    },
     dna_payload: {
         type: String,
         required: [true, 'DNA Payload is required'],
@@ -17,6 +25,12 @@ const CertificateSchema = new mongoose.Schema({
     chaotic_seed: {
         type: String,
         required: [true, 'Chaotic seed is required for decryption algorithms']
+    },
+    certificate_hash: {
+        type: String,
+        required: [true, 'SHA-256 tampered proof hash is required'],
+        minlength: 64,
+        maxlength: 64
     },
     issued_by: {
         type: mongoose.Schema.Types.ObjectId,

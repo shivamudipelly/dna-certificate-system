@@ -8,6 +8,8 @@ import Dashboard from './pages/admin/Dashboard';
 import IssueCertificate from './pages/admin/IssueCertificate';
 import CertificateList from './pages/admin/CertificateList';
 import Settings from './pages/admin/Settings';
+import ManageUsers from './pages/admin/ManageUsers';
+import ReviewDrafts from './pages/admin/ReviewDrafts';
 import Verify from './pages/public/Verify';
 
 function App() {
@@ -46,6 +48,8 @@ function App() {
                         <Route path="dashboard" element={<Dashboard />} />
                         <Route path="issue" element={<IssueCertificate />} />
                         <Route path="certificates" element={<CertificateList />} />
+                        <Route path="drafts" element={<ReviewDrafts />} />
+                        <Route path="users" element={<ManageUsers />} />
                         <Route path="settings" element={<Settings />} />
                         <Route path="*" element={<Navigate to="dashboard" replace />} />
                     </Route>

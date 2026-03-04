@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { certificateAPI } from '../../services/api';
+import { certificateAPI, draftAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import QRCodeDisplay from '../../components/certificate/QRCodeDisplay';
+import PremiumCertificateCard from '../../components/certificate/PremiumCertificateCard';
+import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/Icons';
 
 const degrees = ['B.Tech', 'M.Tech', 'B.Sc', 'M.Sc', 'Ph.D', 'MBA', 'BCA', 'MCA'];
 
-const Field = ({ label, children, half = false }: { label: string; children: React.ReactNode; half?: boolean }) => (
+const Field = ({ label, id, children, half = false }: { label: string; id: string; children: React.ReactNode; half?: boolean }) => (
     <div className="form-group" style={{ gridColumn: half ? 'span 1' : 'span 2' }}>
-        <label className="form-label">{label}</label>
+        <label htmlFor={id} className="form-label">{label}</label>
         {children}
     </div>
 );
@@ -42,7 +43,8 @@ function Stepper({ active }: { active: number }) {
 }
 
 export default function IssueCertificate() {
-    const [form, setForm] = useState({ studentName: '', rollNumber: '', degree: 'B.Tech', department: '', graduationYear: String(new Date().getFullYear()), cgpa: '' });
+    const { user } = useAuth();
+    const [form, setForm] = useState({ studentName: '', rollNumber: '', degree: 'B.Tech', department: user?.department ?? '', graduationYear: String(new Date().getFullYear()), cgpa: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [step, setStep] = useState<'form' | 'encrypting' | 'done'>('form');
@@ -67,24 +69,38 @@ export default function IssueCertificate() {
         setIsSubmitting(true);
         setStep('encrypting');
         try {
-            const res = await certificateAPI.issue({
+            const payload = {
                 name: form.studentName.trim(),
                 roll: form.rollNumber.trim().toUpperCase(),
                 degree: form.degree,
                 department: form.department.trim(),
                 year: parseInt(form.graduationYear),
                 cgpa: parseFloat(parseFloat(form.cgpa).toFixed(2)),
-            }) as any;
-            if (res?.success) {
-                toast.success('Certificate encrypted & issued!');
-                setResult(res);
-                setStep('done');
+            };
+
+            if (user?.role === 'Clerk') {
+                const res = await draftAPI.create(payload) as any;
+                if (res?.success) {
+                    toast.success('Draft submitted for review');
+                    setResult(res);
+                    setStep('done');
+                } else {
+                    toast.error('Draft creation failed');
+                    setStep('form');
+                }
             } else {
-                toast.error('Encryption failed');
-                setStep('form');
+                const res = await certificateAPI.issue(payload) as any;
+                if (res?.success) {
+                    toast.success('Certificate encrypted & issued!');
+                    setResult(res);
+                    setStep('done');
+                } else {
+                    toast.error('Encryption failed');
+                    setStep('form');
+                }
             }
         } catch (err: any) {
-            toast.error(err.error || 'Failed to issue certificate');
+            toast.error(err.error || (user?.role === 'Clerk' ? 'Failed to save draft' : 'Failed to issue certificate'));
             setStep('form');
         } finally {
             setIsSubmitting(false);
@@ -122,44 +138,94 @@ export default function IssueCertificate() {
     );
 
     // Success screen
-    if (step === 'done' && result) return (
-        <div className="anim-scale" style={{ maxWidth: 700, margin: '0 auto' }}>
-            <Stepper active={4} />
-            <div style={{
-                background: 'rgba(16,185,129,0.08)',
-                border: '1px solid rgba(16,185,129,0.3)',
-                borderRadius: 'var(--radius)',
-                padding: '18px 22px',
-                marginBottom: 24,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                boxShadow: '0 4px 24px rgba(16,185,129,0.1)',
-            }}>
+    if (step === 'done' && result) {
+        if (user?.role === 'Clerk') {
+            return (
+                <div className="anim-scale" style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center', paddingTop: 60 }}>
+                    <div style={{
+                        width: 80, height: 80, borderRadius: '50%',
+                        background: 'rgba(59,130,246,0.1)', border: '2px solid rgba(59,130,246,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'var(--c-accent-bright)', margin: '0 auto 24px'
+                    }}>
+                        <span style={{ width: 40, height: 40, display: 'flex' }}><Icons.Check /></span>
+                    </div>
+                    <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Draft Submitted Successfully</h2>
+                    <p style={{ color: 'var(--c-text-muted)', marginBottom: 32 }}>Your certificate draft has been saved and is pending HOD approval for DNA encryption.</p>
+                    <button onClick={reset} className="btn btn-primary" style={{ gap: 8 }}>
+                        <span style={{ width: 16, height: 16, display: 'flex' }}><Icons.User /></span> {/* Changed from Edit to User for general addition */}
+                        Draft Another Certificate
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="anim-scale" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 60 }}>
+                <Stepper active={4} />
                 <div style={{
-                    width: 44, height: 44, borderRadius: 12,
-                    background: 'rgba(16,185,129,0.15)',
+                    background: 'rgba(16,185,129,0.08)',
                     border: '1px solid rgba(16,185,129,0.3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--c-green-bright)', flexShrink: 0,
+                    borderRadius: 'var(--radius)',
+                    padding: '18px 22px',
+                    marginBottom: 24,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    boxShadow: '0 4px 24px rgba(16,185,129,0.1)',
                 }}>
-                    <span style={{ width: 22, height: 22, display: 'flex' }}><Icons.Check /></span>
+                    <div style={{
+                        width: 44, height: 44, borderRadius: 12,
+                        background: 'rgba(16,185,129,0.15)',
+                        border: '1px solid rgba(16,185,129,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'var(--c-green-bright)', flexShrink: 0,
+                    }}>
+                        <span style={{ width: 22, height: 22, display: 'flex' }}><Icons.Check /></span>
+                    </div>
+                    <div>
+                        <div style={{ fontWeight: 700, color: 'var(--c-text)', fontSize: 15 }}>Certificate Issued Successfully</div>
+                        <div style={{ fontSize: 13, color: 'var(--c-text-muted)', marginTop: 2 }}>DNA payload encrypted and stored. Share the QR code below.</div>
+                    </div>
+                    <span className="badge badge-green" style={{ marginLeft: 'auto' }}>ISSUED</span>
                 </div>
-                <div>
-                    <div style={{ fontWeight: 700, color: 'var(--c-text)', fontSize: 15 }}>Certificate Issued Successfully</div>
-                    <div style={{ fontSize: 13, color: 'var(--c-text-muted)', marginTop: 2 }}>DNA payload encrypted and stored. Share the QR code below.</div>
+                <PremiumCertificateCard
+                    data={{
+                        name: form.studentName,
+                        roll: form.rollNumber,
+                        degree: form.degree,
+                        department: form.department,
+                        cgpa: parseFloat(form.cgpa),
+                        year: parseInt(form.graduationYear, 10),
+                    }}
+                    publicId={result.public_id}
+                    verificationUrl={result.verification_url}
+                    qrCodeDataUrl={result.qr_code}
+                />
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                    <button onClick={() => window.print()} className="btn btn-secondary" style={{ gap: 8, marginRight: 8 }}>
+                        <span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Print /></span>
+                        Print Certificate
+                    </button>
+                    <button onClick={reset} className="btn btn-primary" style={{ gap: 8 }}>
+                        <span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Issue /></span>
+                        Issue Another Document
+                    </button>
                 </div>
-                <span className="badge badge-green" style={{ marginLeft: 'auto' }}>ISSUED</span>
             </div>
-            <QRCodeDisplay publicId={result.public_id} verificationUrl={result.verification_url} qrCodeDataUrl={result.qr_code} />
-            <div style={{ textAlign: 'center', marginTop: 20 }}>
-                <button onClick={reset} className="btn btn-primary" style={{ gap: 8 }}>
-                    <span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Issue /></span>
-                    Issue Another Certificate
-                </button>
+        );
+    }
+
+    // Block HOD from accessing this form
+    if (user?.role === 'HOD') {
+        return (
+            <div style={{ maxWidth: 720, margin: '60px auto', textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🛡️</div>
+                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--c-text)', marginBottom: 8 }}>Access Restricted</h2>
+                <p style={{ color: 'var(--c-text-muted)' }}>As an HOD, you can only verify existing certificates. You cannot add new details or issue certificates.</p>
             </div>
-        </div>
-    );
+        );
+    }
 
     // Form view
     return (
@@ -167,13 +233,13 @@ export default function IssueCertificate() {
             {/* Header */}
             <div className="page-header-bar">
                 <div className="page-header">
-                    <h2>Issue New Certificate</h2>
-                    <p>Student data will be DNA-encoded and stored securely. No plaintext is ever saved.</p>
+                    <h2>{user?.role === 'Clerk' ? 'Add Certificate Details' : 'Issue New Certificate'}</h2>
+                    <p>{user?.role === 'Clerk' ? 'Enter the student details below and submit for HOD review.' : 'Student data will be DNA-encoded and stored securely.'}</p>
                 </div>
             </div>
 
-            {/* Premium stepper */}
-            <Stepper active={0} />
+            {/* Premium stepper — only shown for SuperAdmin direct issue */}
+            {user?.role !== 'Clerk' && <Stepper active={0} />}
 
             {/* Form card */}
             <div className="card anim-fade-up">
@@ -192,38 +258,40 @@ export default function IssueCertificate() {
                 <div className="card-body">
                     <form onSubmit={handleSubmit}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-                            <Field label="Full Student Name *" half>
-                                <input type="text" className="form-input" placeholder="Anjali Sharma" value={form.studentName} onChange={set('studentName')} disabled={isSubmitting} maxLength={100} />
+                            <Field id="studentName" label="Full Student Name *" half>
+                                <input id="studentName" type="text" className="form-input" placeholder="Anjali Sharma" value={form.studentName} onChange={set('studentName')} disabled={isSubmitting} maxLength={100} />
                             </Field>
-                            <Field label="Roll / Registration Number *" half>
-                                <input type="text" className="form-input" placeholder="CS2021001" value={form.rollNumber} onChange={set('rollNumber')} disabled={isSubmitting} maxLength={20} style={{ textTransform: 'uppercase' }} />
+                            <Field id="rollNumber" label="Roll / Registration Number *" half>
+                                <input id="rollNumber" type="text" className="form-input" placeholder="CS2021001" value={form.rollNumber} onChange={set('rollNumber')} disabled={isSubmitting} maxLength={20} style={{ textTransform: 'uppercase' }} />
                             </Field>
-                            <Field label="Degree Program *" half>
-                                <select className="form-select" value={form.degree} onChange={set('degree')} disabled={isSubmitting}>
+                            <Field id="degree" label="Degree Program *" half>
+                                <select id="degree" className="form-select" value={form.degree} onChange={set('degree')} disabled={isSubmitting}>
                                     {degrees.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
                             </Field>
-                            <Field label="Department / Specialization *" half>
-                                <input type="text" className="form-input" placeholder="Computer Science & Engineering" value={form.department} onChange={set('department')} disabled={isSubmitting} />
+                            <Field id="department" label="Specialization/Department *" half>
+                                <input id="department" type="text" className="form-input" placeholder="Computer Science & Engineering" value={form.department} onChange={set('department')} disabled={isSubmitting || user?.role === 'Clerk'} />
                             </Field>
-                            <Field label="Graduation Year *" half>
-                                <input type="number" className="form-input" min={2000} max={2035} value={form.graduationYear} onChange={set('graduationYear')} disabled={isSubmitting} />
+                            <Field id="graduationYear" label="Graduation Year *" half>
+                                <input id="graduationYear" type="number" className="form-input" min={2000} max={2035} value={form.graduationYear} onChange={set('graduationYear')} disabled={isSubmitting} />
                             </Field>
-                            <Field label="Final CGPA (0.00 – 10.00) *" half>
-                                <input type="number" className="form-input" placeholder="8.75" min={0} max={10} step={0.01} value={form.cgpa} onChange={set('cgpa')} disabled={isSubmitting} />
+                            <Field id="cgpa" label="Final CGPA (0.00 – 10.00) *" half>
+                                <input id="cgpa" type="number" className="form-input" placeholder="8.75" min={0} max={10} step={0.01} value={form.cgpa} onChange={set('cgpa')} disabled={isSubmitting} />
                             </Field>
                         </div>
 
                         <div className="divider" />
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ fontSize: 12, color: 'var(--c-text-faint)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ width: 14, height: 14, display: 'flex', color: 'var(--c-green-bright)' }}><Icons.Shield /></span>
-                                End-to-end encrypted via AES-256 + DNA encoding
-                            </div>
-                            <button type="submit" className="btn btn-primary btn-lg" disabled={isSubmitting} style={{ gap: 8 }}>
+                            {user?.role !== 'Clerk' && (
+                                <div style={{ fontSize: 12, color: 'var(--c-text-faint)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ width: 14, height: 14, display: 'flex', color: 'var(--c-green-bright)' }}><Icons.Shield /></span>
+                                    End-to-end encrypted via AES-256 + DNA encoding
+                                </div>
+                            )}
+                            <button type="submit" className="btn btn-primary btn-lg" disabled={isSubmitting} style={{ gap: 8, marginLeft: 'auto' }}>
                                 <span style={{ width: 18, height: 18, display: 'flex' }}><Icons.DNA /></span>
-                                Encrypt &amp; Issue Certificate
+                                {user?.role === 'Clerk' ? 'Submit for HOD Review' : 'Commence Encryption'}
                             </button>
                         </div>
                     </form>

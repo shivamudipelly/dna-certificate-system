@@ -41,7 +41,7 @@ describe('Certificate native tests', () => {
 
     it('issues a certificate using valid token', async () => {
         // Mongoose and Supertest natively handling everything
-        const reqPayload = { name: 'John', roll: '123', degree: 'BS', cgpa: 3.9, year: 2026 };
+        const reqPayload = { name: 'John', roll: '123', degree: 'BS', department: 'CS', cgpa: 3.9, year: 2026 };
 
         // Manual override for python service since ESM mock behavior was unstable
         const cryptoMock = jest.spyOn(pythonService, 'encryptCertificate').mockResolvedValueOnce({
@@ -63,27 +63,39 @@ describe('Certificate native tests', () => {
     it('verifies existing certificates correctly', async () => {
         const cert = new Certificate({
             public_id: '1234567890',
+            student_name: 'John',
+            roll_number: '123',
             dna_payload: 'ATCG'.repeat(30),
             chaotic_seed: '0.1',
+            certificate_hash: '60f2b1c6445884df7b2e71d601a9f5f16024cbbf1975418c127036762aee50cf',
             issued_by: new mongoose.Types.ObjectId()
         });
         await cert.save();
 
-        const cryptoMock = jest.spyOn(pythonService, 'decryptCertificate').mockResolvedValueOnce({ name: 'John' });
+        const cryptoMock = jest.spyOn(pythonService, 'decryptCertificate').mockResolvedValueOnce({
+            name: 'John',
+            roll: '123',
+            degree: 'BS',
+            department: 'CS',
+            cgpa: 3.9,
+            year: 2026
+        });
 
         const res = await request(app).get('/api/certificates/verify/1234567890');
         expect(res.status).toBe(200);
         expect(res.body.data.name).toBe('John');
 
         cryptoMock.mockRestore();
-        cryptoMock.mockRestore();
     });
 
     it('fetches admin certificates cleanly without DNA payload', async () => {
         const cert = new Certificate({
             public_id: '9876543210',
+            student_name: 'Alice',
+            roll_number: '456',
             dna_payload: 'ATCG'.repeat(30),
             chaotic_seed: '0.1',
+            certificate_hash: '0000000000000000000000000000000000000000000000000000000000000000',
             issued_by: adminId
         });
         await cert.save();
@@ -97,8 +109,11 @@ describe('Certificate native tests', () => {
     it('revokes certificate successfully', async () => {
         const cert = new Certificate({
             public_id: 'revoke_123',
+            student_name: 'Bob',
+            roll_number: '789',
             dna_payload: 'ATCG'.repeat(30),
             chaotic_seed: '0.1',
+            certificate_hash: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
             issued_by: adminId
         });
         await cert.save();

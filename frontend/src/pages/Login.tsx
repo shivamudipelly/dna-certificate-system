@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import DnaLogo from '../components/DnaLogo';
 import { Icons } from '../components/Icons';
 
 /* ── Floating particle field ───────────────────────── */
@@ -34,7 +33,8 @@ function DnaHelix() {
     useEffect(() => {
         const canvas = document.getElementById('dna-canvas') as HTMLCanvasElement;
         if (!canvas) return;
-        const ctx = canvas.getContext('2d')!;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
         let t = 0;
@@ -84,12 +84,12 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-    useEffect(() => { document.title = 'Admin Login · DNA Certificate System'; }, []);
+    useEffect(() => { document.title = 'Admin Login · University Verification System'; }, []);
     useEffect(() => { if (!authLoading && isAuthenticated) navigate('/admin/dashboard', { replace: true }); }, [isAuthenticated, authLoading]);
 
     const validate = () => {
         const e: typeof errors = {};
-        if (!email.trim()) e.email = 'Email is required';
+        if (!email.trim()) e.email = 'Email address is required';
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Enter a valid email';
         if (!password) e.password = 'Password is required';
         else if (password.length < 6) e.password = 'Password too short';
@@ -133,36 +133,36 @@ export default function Login() {
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
                         <div style={{
-                            width: 52, height: 52, borderRadius: 14,
-                            background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                            width: 64, height: 64, borderRadius: 12,
+                            background: '#ffffff',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 8px 32px rgba(124,58,237,0.5)',
+                            boxShadow: '0 8px 32px rgba(255,255,255,0.1)', overflow: 'hidden'
                         }}>
-                            <DnaLogo size={30} />
+                            <img src="/logo.png" alt="University Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} />
                         </div>
                         <div>
-                            <div style={{ fontSize: 20, fontWeight: 900, background: 'linear-gradient(90deg, #a78bfa, #67e8f9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>DNA Certs</div>
-                            <div style={{ fontSize: 11, color: 'var(--c-text-faint)', marginTop: 2 }}>Certificate System</div>
+                            <div style={{ fontSize: 20, fontWeight: 900, color: '#ffffff' }}>University Portal</div>
+                            <div style={{ fontSize: 13, color: 'var(--c-text-faint)', marginTop: 2 }}>Certificate Verification System</div>
                         </div>
                     </div>
 
                     <h1 style={{ fontSize: 34, fontWeight: 900, color: 'var(--c-text)', lineHeight: 1.15, marginBottom: 12 }}>
-                        Secure Certificate<br />
-                        <span style={{ background: 'linear-gradient(90deg, #a78bfa, #67e8f9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                            Management Portal
+                        Digital Certificate<br />
+                        <span style={{ color: '#a78bfa' }}>
+                            Management System
                         </span>
                     </h1>
-                    <p style={{ fontSize: 14, color: 'var(--c-text-muted)', lineHeight: 1.7, marginBottom: 32, maxWidth: 360 }}>
-                        Issue, manage and cryptographically verify academic certificates using DNA-chain encryption.
+                    <p style={{ fontSize: 15, color: 'var(--c-text-muted)', lineHeight: 1.7, marginBottom: 32, maxWidth: 360 }}>
+                        Securely issue, verify, and manage authentic student academic records.
                     </p>
                 </div>
 
                 {/* Feature badges */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', position: 'relative', zIndex: 1 }}>
                     {[
-                        { bg: 'rgba(124,58,237,0.2)', icon: '🧬', text: 'DNA-chain cryptography', sub: 'Tamper-proof encryption' },
-                        { bg: 'rgba(16,185,129,0.2)', icon: '✅', text: 'Instant QR verification', sub: 'No account required' },
-                        { bg: 'rgba(6,182,212,0.2)', icon: '🔐', text: 'Role-based access control', sub: 'Admin & SuperAdmin roles' },
+                        { bg: 'rgba(124,58,237,0.2)', icon: '🛡️', text: 'Bank-Grade Security', sub: 'End-to-end protected records' },
+                        { bg: 'rgba(16,185,129,0.2)', icon: '✅', text: 'Instant Verification', sub: 'Scan QR codes instantly' },
+                        { bg: 'rgba(6,182,212,0.2)', icon: '👥', text: 'Granular Permissions', sub: 'Secure role-based access' },
                     ].map(f => (
                         <div key={f.text} className="feature-badge">
                             <div className="feature-badge-icon" style={{ background: f.bg }}>{f.icon}</div>
@@ -174,19 +174,11 @@ export default function Login() {
                     ))}
                 </div>
 
-                {/* Stats row */}
-                <div className="stat-pills-row" style={{ marginTop: 8 }}>
-                    {[{ v: '99.9%', l: 'Uptime' }, { v: '256-bit', l: 'Encryption' }, { v: '< 1s', l: 'Verify Time' }].map(s => (
-                        <div key={s.l} className="stat-pill">
-                            <div className="stat-pill-value">{s.v}</div>
-                            <div className="stat-pill-label">{s.l}</div>
-                        </div>
-                    ))}
-                </div>
+                <div style={{ height: 20 }}></div>
 
                 {/* Version */}
-                <div style={{ position: 'relative', zIndex: 1, fontSize: 11, color: 'var(--c-text-faint)' }}>
-                    DNA Certificate System v2.0 · A·T·C·G
+                <div style={{ position: 'relative', zIndex: 1, fontSize: 12, color: 'var(--c-text-faint)' }}>
+                    Certificate Verification System v2.0
                 </div>
             </div>
 
@@ -198,16 +190,15 @@ export default function Login() {
 
                     {/* Mobile only: show logo */}
                     <div style={{ textAlign: 'center', marginBottom: 36, display: 'none' }} className="mobile-logo">
-                        <div style={{ width: 60, height: 60, borderRadius: 16, background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 8px 32px rgba(124,58,237,0.4)' }}>
-                            <DnaLogo size={34} />
+                        <div style={{ width: 80, height: 80, borderRadius: 16, background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 8px 32px rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                            <img src="/logo.png" alt="University Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 6 }} />
                         </div>
-                        <h1 style={{ fontSize: 24, fontWeight: 900, background: 'linear-gradient(90deg, #a78bfa, #67e8f9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Admin Portal</h1>
                     </div>
 
                     {/* Form header */}
                     <div style={{ marginBottom: 32 }}>
                         <h2 style={{ fontSize: 28, fontWeight: 900, color: 'var(--c-text)', marginBottom: 6 }}>Welcome back</h2>
-                        <p style={{ fontSize: 14, color: 'var(--c-text-muted)' }}>Sign in to your administrator account</p>
+                        <p style={{ fontSize: 15, color: 'var(--c-text-muted)' }}>Log in to your account to continue</p>
                     </div>
 
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -221,7 +212,7 @@ export default function Login() {
                                 <input
                                     id="email" type="email"
                                     className={`form-input${errors.email ? ' error' : ''}`}
-                                    placeholder="you@university.edu"
+                                    placeholder="admin@university.edu"
                                     value={email}
                                     onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: undefined })); }}
                                     autoComplete="email"
@@ -242,7 +233,7 @@ export default function Login() {
                                     id="password"
                                     type={showPass ? 'text' : 'password'}
                                     className={`form-input${errors.password ? ' error' : ''}`}
-                                    placeholder="••••••••••"
+                                    placeholder="••••••••"
                                     value={password}
                                     onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: undefined })); }}
                                     autoComplete="current-password"
@@ -262,7 +253,7 @@ export default function Login() {
                             disabled={loading}
                             style={{ marginTop: 4 }}
                         >
-                            {loading ? <><div className="spinner" />Authenticating…</> : <><span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Lock /></span> Sign In</>}
+                            {loading ? <><div className="spinner" />Logging in…</> : <><span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Lock /></span> Log in</>}
                         </button>
                     </form>
 
@@ -271,9 +262,9 @@ export default function Login() {
 
                     {/* Trust row */}
                     <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
-                        {['5 attempts/min', 'AES-256 encrypted', 'Session secured'].map(t => (
-                            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--c-text-faint)' }}>
-                                <span style={{ color: 'var(--c-green-bright)', fontSize: 12 }}>✓</span> {t}
+                        {['Secure login', 'Encrypted connection'].map(t => (
+                            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--c-text-faint)' }}>
+                                <span style={{ color: 'var(--c-green-bright)', fontSize: 13 }}>✓</span> {t}
                             </div>
                         ))}
                     </div>

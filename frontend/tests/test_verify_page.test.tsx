@@ -11,6 +11,13 @@ vi.mock('../src/services/api', () => ({
     },
 }));
 
+vi.mock('../src/context/AuthContext', () => ({
+    useAuth: () => ({
+        isAuthenticated: false,
+        user: null
+    })
+}));
+
 describe('Verify Page Tests', () => {
 
     beforeEach(() => {
@@ -29,10 +36,18 @@ describe('Verify Page Tests', () => {
     };
 
     it('loads standard verified certificate template view', async () => {
-        certificateAPI.verify.mockResolvedValueOnce({
+        (certificateAPI.verify as any).mockResolvedValueOnce({
             success: true,
-            data: { studentName: 'Test Student', stringData: 'map' },
-            verified_at: new Date().toISOString()
+            data: {
+                name: 'Test Student',
+                roll: '22EG105J38',
+                degree: 'B.Tech',
+                department: 'IT',
+                year: 2026,
+                cgpa: 9.85
+            },
+            verified_at: new Date().toISOString(),
+            qr_code: 'data:image/png;base64,mock_qr'
         });
 
         renderVerify();
@@ -44,7 +59,7 @@ describe('Verify Page Tests', () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/Valid Authentic Record/i)).toBeInTheDocument();
+            expect(screen.getByText(/Authentic Record Verified/i)).toBeInTheDocument();
         });
     });
 
@@ -52,7 +67,7 @@ describe('Verify Page Tests', () => {
         const tamperErr = new Error('TAMPERED');
         Object.assign(tamperErr, { response: { status: 403, data: { error: 'TAMPERED' } }, error: 'TAMPERED', status: 403 });
 
-        certificateAPI.verify.mockRejectedValueOnce(tamperErr);
+        (certificateAPI.verify as any).mockRejectedValueOnce(tamperErr);
 
         renderVerify();
 
@@ -65,7 +80,7 @@ describe('Verify Page Tests', () => {
         const revokedErr = new Error('Revoked');
         Object.assign(revokedErr, { response: { status: 403, data: { error: 'revoked admin' } }, error: 'revoked' });
 
-        certificateAPI.verify.mockRejectedValueOnce(revokedErr);
+        (certificateAPI.verify as any).mockRejectedValueOnce(revokedErr);
 
         renderVerify();
 
@@ -78,7 +93,7 @@ describe('Verify Page Tests', () => {
         const notFoundErr = new Error('Not found');
         Object.assign(notFoundErr, { response: { status: 404 }, error: 'Not found' });
 
-        certificateAPI.verify.mockRejectedValueOnce(notFoundErr);
+        (certificateAPI.verify as any).mockRejectedValueOnce(notFoundErr);
 
         renderVerify();
 

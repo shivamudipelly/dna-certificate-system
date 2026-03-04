@@ -8,236 +8,26 @@ import toast from 'react-hot-toast';
 
 type ErrState = 'NONE' | 'NOT_FOUND' | 'REVOKED' | 'TAMPERED' | 'SERVER_ERROR';
 
-/* ─── Official Certificate Document ─────────────────────── */
-function CertificateDocument({ data, publicId }: { data: any; publicId: string }) {
-    const handlePrint = () => window.print();
-    const handleCopy = () => {
-        navigator.clipboard.writeText(window.location.href).then(() => toast.success('Verification link copied!'));
-    };
-
-    const issuedDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-
-    // CGPA grade classification
-    const cgpa = parseFloat(data?.cgpa ?? '0');
-    const getGradeClass = (c: number) => {
-        if (c >= 9.0) return { label: 'Outstanding', color: '#10b981' };
-        if (c >= 8.0) return { label: 'Excellent', color: '#06b6d4' };
-        if (c >= 7.0) return { label: 'Very Good', color: '#8b5cf6' };
-        if (c >= 6.0) return { label: 'Good', color: '#f59e0b' };
-        return { label: 'Satisfactory', color: '#94a3b8' };
-    };
-    const gradeInfo = getGradeClass(cgpa);
-
-    return (
-        <div className="cert-wrapper anim-scale">
-            {/* Action bar (screen only) */}
-            <div className="cert-action-bar no-print">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="badge badge-green" style={{ fontSize: 12, padding: '4px 12px' }}>
-                        ✓ DNA VERIFIED
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--c-text-muted)' }}>
-                        Cryptographic integrity confirmed · No tampering detected
-                    </span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={handleCopy} className="btn btn-secondary btn-sm" style={{ gap: 6 }}>
-                        <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Share /></span>
-                        Share
-                    </button>
-                    <button onClick={handlePrint} className="btn btn-primary btn-sm" style={{ gap: 6 }}>
-                        <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Print /></span>
-                        Print Certificate
-                    </button>
-                </div>
-            </div>
-
-            {/* ════ THE CERTIFICATE PAPER ════ */}
-            <div className="cert-paper" id="certificate-print">
-
-                {/* Decorative border */}
-                <div className="cert-border-outer">
-                    <div className="cert-border-inner">
-
-                        {/* DNA watermark background */}
-                        <div className="cert-watermark">
-                            <div style={{ opacity: 0.04, transform: 'scale(3) rotate(-15deg)' }}>
-                                <DnaLogo size={180} />
-                            </div>
-                        </div>
-
-                        {/* ── HEADER ── */}
-                        <div className="cert-header">
-                            <div className="cert-logo-row">
-                                <div className="cert-logo-icon">
-                                    <DnaLogo size={38} />
-                                </div>
-                                <div className="cert-institution">
-                                    <div className="cert-inst-name">DNA CERTIFICATE AUTHORITY</div>
-                                    <div className="cert-inst-sub">Blockchain-Grade Academic Credential System</div>
-                                    <div className="cert-inst-sub2">Secured by AES-256 Encryption &amp; DNA Cryptographic Encoding</div>
-                                </div>
-                            </div>
-                            <div className="cert-divider-line" />
-                            <div className="cert-doc-type">CERTIFICATE OF ACADEMIC ACHIEVEMENT</div>
-                        </div>
-
-                        {/* ── CERT ID & DATE ROW ── */}
-                        <div className="cert-meta-row">
-                            <div className="cert-meta-item">
-                                <span className="cert-meta-label">Certificate No.</span>
-                                <span className="cert-meta-value mono">{publicId.toUpperCase()}</span>
-                            </div>
-                            <div className="cert-meta-item" style={{ textAlign: 'right' }}>
-                                <span className="cert-meta-label">Date of Verification</span>
-                                <span className="cert-meta-value">{issuedDate}</span>
-                            </div>
-                        </div>
-
-                        {/* ── STUDENT DETAILS TABLE ── */}
-                        <div className="cert-section-title">Student Information</div>
-                        <table className="cert-detail-table">
-                            <tbody>
-                                <tr>
-                                    <td className="cert-td-label">Full Name</td>
-                                    <td className="cert-td-sep">:</td>
-                                    <td className="cert-td-value cert-name">{data?.name ?? '—'}</td>
-                                </tr>
-                                <tr>
-                                    <td className="cert-td-label">Roll / Registration No.</td>
-                                    <td className="cert-td-sep">:</td>
-                                    <td className="cert-td-value cert-mono">{data?.roll ?? '—'}</td>
-                                </tr>
-                                <tr>
-                                    <td className="cert-td-label">Degree Programme</td>
-                                    <td className="cert-td-sep">:</td>
-                                    <td className="cert-td-value">{data?.degree ?? '—'}</td>
-                                </tr>
-                                <tr>
-                                    <td className="cert-td-label">Department / Specialization</td>
-                                    <td className="cert-td-sep">:</td>
-                                    <td className="cert-td-value">{data?.department ?? '—'}</td>
-                                </tr>
-                                <tr>
-                                    <td className="cert-td-label">Year of Graduation</td>
-                                    <td className="cert-td-sep">:</td>
-                                    <td className="cert-td-value">{data?.year ?? '—'}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        {/* ── CGPA / PERFORMANCE BAND ── */}
-                        <div className="cert-section-title" style={{ marginTop: 28 }}>Academic Performance</div>
-                        <div className="cert-performance-row">
-                            <div className="cert-cgpa-block">
-                                <div className="cert-cgpa-label">Cumulative GPA</div>
-                                <div className="cert-cgpa-value" style={{ color: gradeInfo.color }}>
-                                    {data?.cgpa ?? '—'}
-                                    <span className="cert-cgpa-max"> / 10.00</span>
-                                </div>
-                                <div className="cert-cgpa-grade" style={{ background: gradeInfo.color + '22', borderColor: gradeInfo.color + '44', color: gradeInfo.color }}>
-                                    {gradeInfo.label}
-                                </div>
-                            </div>
-
-                            {/* CGPA bar */}
-                            <div className="cert-cgpa-bar-wrap">
-                                <div className="cert-cgpa-bar-track">
-                                    <div
-                                        className="cert-cgpa-bar-fill"
-                                        style={{ width: `${Math.min((cgpa / 10) * 100, 100)}%`, background: `linear-gradient(90deg, ${gradeInfo.color}, ${gradeInfo.color}88)` }}
-                                    />
-                                </div>
-                                <div className="cert-cgpa-scale">
-                                    {['0', '2', '4', '6', '8', '10'].map(v => <span key={v}>{v}</span>)}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="cert-divider" />
-
-                        {/* ── AUTHENTICITY STATEMENT ── */}
-                        <div className="cert-statement">
-                            This is to certify that the above-mentioned student has successfully fulfilled all requirements for the award
-                            of the degree as stated above. This certificate has been cryptographically signed and encoded using
-                            AES-256 encryption and DNA sequence encoding to ensure immutable authenticity and prevent forgery.
-                        </div>
-
-                        {/* ── SIGNATURES ── */}
-                        <div className="cert-signatures">
-                            <div className="cert-sig-block">
-                                <div className="cert-sig-line" />
-                                <div className="cert-sig-name">Controller of Examinations</div>
-                                <div className="cert-sig-title">DNA Certificate Authority</div>
-                            </div>
-                            <div className="cert-seal">
-                                <div className="cert-seal-ring">
-                                    <div className="cert-seal-inner">
-                                        <Icons.Check />
-                                        <span>VERIFIED</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="cert-sig-block" style={{ textAlign: 'right' }}>
-                                <div className="cert-sig-line" />
-                                <div className="cert-sig-name">System Administrator</div>
-                                <div className="cert-sig-title">Issuing Authority</div>
-                            </div>
-                        </div>
-
-                        {/* ── DNA VERIFICATION STRIP ── */}
-                        <div className="cert-verify-strip">
-                            <div className="cert-verify-strip-left">
-                                <span style={{ opacity: 0.7 }}><Icons.Shield /></span>
-                                <div>
-                                    <div className="cert-verify-label">DNA Verified</div>
-                                    <div className="cert-verify-id mono">ID: {publicId}</div>
-                                </div>
-                            </div>
-                            <div className="cert-verify-qr">
-                                {/* Simple QR-like placeholder */}
-                                <div className="cert-qr-box">
-                                    <div className="cert-qr-corner tl" /><div className="cert-qr-corner tr" />
-                                    <div className="cert-qr-dots">
-                                        {Array.from({ length: 25 }).map((_, i) => (
-                                            <div key={i} className="cert-qr-dot" style={{ opacity: Math.random() > 0.4 ? 1 : 0 }} />
-                                        ))}
-                                    </div>
-                                    <div className="cert-qr-corner bl" /><div className="cert-qr-corner br" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="cert-footer-note">
-                            Note: This certificate is digitally protected. Any alteration of the encoded data will be detected automatically.
-                            Verify anytime at: <strong>{window.location.origin}/verify/{publicId}</strong>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
+import PremiumCertificateCard from '../../components/certificate/PremiumCertificateCard';
 
 /* ─── Error Cards (unchanged but cleaner) ───────────────── */
 function ErrorCard({ type, id, onRetry }: { type: ErrState; id?: string; onRetry?: () => void }) {
     const configs = {
         TAMPERED: {
             color: 'var(--c-red)', bg: 'rgba(244,63,94,0.08)', border: 'rgba(244,63,94,0.2)',
-            icon: <Icons.Shield />, title: 'TAMPERED — Data Corrupted',
+            icon: <Icons.Shield />, title: 'Forged / Tampered Certificate',
             msg: `The DNA payload for certificate ${id} has been modified after issuance. This certificate is invalid.`,
             badge: '⛔ Do Not Accept This Certificate',
         },
         REVOKED: {
             color: 'var(--c-amber)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)',
-            icon: <Icons.Info />, title: 'Certificate Revoked',
+            icon: <Icons.Info />, title: 'Access Revoked',
             msg: `Certificate ${id} has been revoked by the issuing institution and is no longer valid.`,
             badge: '🚫 No Longer Valid',
         },
         NOT_FOUND: {
             color: 'var(--c-text-muted)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.08)',
-            icon: <Icons.Search />, title: 'Certificate Not Found',
+            icon: <Icons.Search />, title: 'Certificate Hash Unmatched',
             msg: `No certificate found for ID ${id}. Please double-check the ID and try again.`,
             badge: '❓ Not Found',
         },
@@ -271,6 +61,12 @@ function ErrorCard({ type, id, onRetry }: { type: ErrState; id?: string; onRetry
                     {onRetry && (
                         <button onClick={onRetry} className="btn btn-secondary btn-sm">Try Again</button>
                     )}
+                    {type === 'TAMPERED' && (
+                        <>
+                            <button onClick={() => alert('Fraud reported to DNA Authority')} className="btn btn-secondary btn-sm" style={{ color: 'var(--c-red)' }}>Report fraud</button>
+                            <button onClick={() => window.open('mailto:contact@university.edu')} className="btn btn-secondary btn-sm">Contact university</button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
@@ -287,7 +83,7 @@ export default function Verify() {
     const [error, setError] = useState<ErrState>('NONE');
     const [data, setData] = useState<any>(null);
 
-    useEffect(() => { document.title = 'Certificate Verification · DNA Certs'; }, []);
+    useEffect(() => { document.title = 'Certificate Verification · University Verification System'; }, []);
 
     useEffect(() => {
         if (id) fetchVerify(id);
@@ -361,7 +157,7 @@ export default function Verify() {
                         <div className="verify-hero-icon">
                             <span style={{ width: 40, height: 40, color: 'var(--c-accent-bright)', display: 'flex' }}><Icons.Shield /></span>
                         </div>
-                        <h1>Verify Certificate</h1>
+                        <h1>Cryptographic Integrity Search</h1>
                         <p>Enter the certificate ID to verify its authenticity using DNA cryptographic verification.</p>
                         <div className="how-it-works">
                             {[
@@ -396,7 +192,7 @@ export default function Verify() {
                         <input
                             type="text"
                             className="mono"
-                            placeholder="Enter Certificate ID (e.g. a1b2c3d4e5)"
+                            placeholder="Enter Public ID"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             disabled={isLoading}
@@ -424,14 +220,19 @@ export default function Verify() {
                                 <span style={{ width: 22, height: 22, display: 'flex' }}><Icons.DNA /></span>
                             </div>
                         </div>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-text)' }}>Decrypting DNA Sequence…</div>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-text)' }}>Deconstructing Cryptographic Blocks...</div>
                         <div style={{ fontSize: 13, color: 'var(--c-text-muted)', marginTop: 6 }}>Verifying cryptographic integrity</div>
                     </div>
                 )}
 
                 {/* ── Certificate Document ── */}
                 {!isLoading && error === 'NONE' && data && id && (
-                    <CertificateDocument data={data.data} publicId={id} />
+                    <PremiumCertificateCard
+                        data={data.data}
+                        publicId={id}
+                        verificationUrl={`${window.location.origin}/verify/${id}`}
+                        qrCodeDataUrl={data.qr_code}
+                    />
                 )}
 
                 {/* Error states */}

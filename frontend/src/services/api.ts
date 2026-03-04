@@ -81,4 +81,21 @@ export const certificateAPI = {
     revoke: (publicId: string): Promise<ApiResponse> => api.put(`/certificates/${publicId}/revoke`),
 };
 
+export const draftAPI = {
+    create: (certData: CertificateIssuePayload): Promise<any> => api.post('/drafts', certData),
+    edit: (id: string, certData: CertificateIssuePayload): Promise<any> => api.put(`/drafts/${id}`, certData),
+    list: (): Promise<any> => api.get('/drafts'),
+    submit: (id: string): Promise<any> => api.put(`/drafts/${id}/submit`),
+    verify: (id: string): Promise<any> => api.put(`/drafts/${id}/verify`),
+    revertClerk: (id: string, remarks: string): Promise<any> => api.put(`/drafts/${id}/revert-clerk`, { remarks }),
+    revertHOD: (id: string, remarks: string): Promise<any> => api.put(`/drafts/${id}/revert-hod`, { remarks }),
+    approve: (id: string): Promise<any> => api.put(`/drafts/${id}/approve`),
+};
+
+export const userAPI = {
+    list: (): Promise<any> => api.get('/auth/users'),
+    edit: (id: string, data: { role?: string; department?: string }): Promise<any> => api.put(`/auth/users/${id}`, data),
+    delete: (id: string): Promise<any> => api.delete(`/auth/users/${id}`),
+};
+
 export default api;

@@ -25,6 +25,10 @@ const AdminSchema = new mongoose.Schema({
         trim: true,
         default: null
     },
+    is_root: {
+        type: Boolean,
+        default: false
+    },
     isActive: {
         type: Boolean,
         default: true

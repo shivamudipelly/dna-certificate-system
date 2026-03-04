@@ -25,6 +25,17 @@ vi.mock('../src/services/api', () => ({
     certificateAPI: {}
 }));
 
+vi.mock('../src/context/AuthContext', () => ({
+    AuthProvider: ({ children }: any) => <>{children}</>,
+    useAuth: () => ({
+        // We link the mock directly to authAPI so the test assertion works
+        login: async (e: string, p: string) => { await authAPI.login(e, p); },
+        isAuthenticated: false,
+        isLoading: false,
+        user: null
+    })
+}));
+
 describe('Login Page Tests', () => {
 
     const renderLogin = () => {
@@ -43,13 +54,13 @@ describe('Login Page Tests', () => {
 
     it('renders login form properly', () => {
         renderLogin();
-        expect(screen.getByPlaceholderText(/staff@university.edu/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/admin@university.edu/i)).toBeInTheDocument();
         expect(screen.getByPlaceholderText(/••••••••/i)).toBeInTheDocument();
     });
 
     it('shows validation errors for empty fields', async () => {
         renderLogin();
-        fireEvent.click(screen.getByRole('button', { name: /Authenticate Access/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Log in/i }));
 
         await waitFor(() => {
             expect(screen.getByText(/Email address is required/i)).toBeInTheDocument();
@@ -57,16 +68,16 @@ describe('Login Page Tests', () => {
     });
 
     it('calls logic natively on correct submit', async () => {
-        authAPI.login.mockResolvedValueOnce({
+        (authAPI.login as any).mockResolvedValueOnce({
             success: true,
             token: 'mock-token',
             admin: { email: 'superadmin@dna.local', role: 'SuperAdmin' }
         });
 
         renderLogin();
-        fireEvent.change(screen.getByPlaceholderText(/staff@university.edu/i), { target: { value: 'superadmin@dna.local' } });
+        fireEvent.change(screen.getByPlaceholderText(/admin@university.edu/i), { target: { value: 'superadmin@dna.local' } });
         fireEvent.change(screen.getByPlaceholderText(/••••••••/i), { target: { value: 'password123' } });
-        fireEvent.click(screen.getByRole('button', { name: /Authenticate Access/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Log in/i }));
 
         await waitFor(() => {
             expect(authAPI.login).toHaveBeenCalledWith('superadmin@dna.local', 'password123');

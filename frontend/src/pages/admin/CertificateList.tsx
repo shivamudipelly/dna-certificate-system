@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Certificate, CertificateListResponse } from '../../types';
 import { Icons } from '../../components/Icons';
+import PremiumCertificateCard from '../../components/certificate/PremiumCertificateCard';
 
 // Simple modal component
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -11,7 +12,7 @@ function Modal({ open, onClose, children }: { open: boolean; onClose: () => void
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }} />
-            <div className="glass anim-scale" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520, borderColor: 'rgba(124,58,237,0.25)' }}>
+            <div className="glass anim-scale" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', borderColor: 'rgba(124,58,237,0.25)' }}>
                 {children}
             </div>
         </div>
@@ -33,6 +34,7 @@ export default function CertificateList() {
     const [revoking, setRevoking] = useState(false);
 
     const isSuperAdmin = user?.role === 'SuperAdmin';
+    const isClerk = user?.role === 'Clerk';
 
     const fetchCerts = async (page: number) => {
         setIsLoading(true);
@@ -50,10 +52,28 @@ export default function CertificateList() {
 
     useEffect(() => { fetchCerts(1); }, []);
 
+    // Fetch full certificate details for the modal
+    const fetchCertDetails = async (publicId: string) => {
+        setIsLoading(true);
+        try {
+            const res = await certificateAPI.verify(publicId) as any;
+            if (res?.success) {
+                setSelected({ ...selected, fullData: res.data } as any);
+                setViewOpen(true);
+            }
+        } catch (err: any) {
+            toast.error(err.error || 'Failed to decrypt certificate data');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const filtered = certificates
         .filter(c => {
-            const s = `${c.public_id}`.toLowerCase();
-            const matchSearch = s.includes(search.toLowerCase());
+            const searchLower = search.toLowerCase();
+            const matchSearch = String(c.public_id).toLowerCase().includes(searchLower) ||
+                (c.student_name && c.student_name.toLowerCase().includes(searchLower)) ||
+                (c.roll_number && c.roll_number.toLowerCase().includes(searchLower));
             const matchStatus = filterStatus === 'ALL' || c.status?.toLowerCase() === filterStatus.toLowerCase();
             return matchSearch && matchStatus;
         })
@@ -95,7 +115,7 @@ export default function CertificateList() {
                     <input
                         type="text"
                         className="form-input"
-                        placeholder="Search by Certificate ID…"
+                        placeholder="Search by ID, Name, or Roll No…"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
@@ -133,11 +153,13 @@ export default function CertificateList() {
                             <thead>
                                 <tr>
                                     <th>Certificate ID</th>
+                                    <th>Student Name</th>
+                                    <th>Roll No.</th>
                                     <th>Status</th>
                                     <th>Issued</th>
                                     <th>Verifications</th>
                                     <th>Last Verified</th>
-                                    <th style={{ textAlign: 'right' }}>Actions</th>
+                                    {isSuperAdmin && <th style={{ textAlign: 'right' }}>Actions</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -148,6 +170,8 @@ export default function CertificateList() {
                                                 {cert.public_id}
                                             </span>
                                         </td>
+                                        <td style={{ fontWeight: 600 }}>{cert.student_name ?? '—'}</td>
+                                        <td className="mono">{cert.roll_number ?? '—'}</td>
                                         <td>
                                             <span className={`badge ${cert.status === 'revoked' ? 'badge-red' : 'badge-green'}`}>
                                                 {cert.status ?? 'active'}
@@ -158,35 +182,37 @@ export default function CertificateList() {
                                         <td style={{ fontSize: 12 }}>
                                             {cert.last_verified_at ? new Date(cert.last_verified_at).toLocaleDateString() : <span style={{ color: 'var(--c-text-faint)' }}>Never</span>}
                                         </td>
-                                        <td>
-                                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                                                <button
-                                                    className="btn btn-secondary btn-sm"
-                                                    onClick={() => { setSelected(cert); setViewOpen(true); }}
-                                                    style={{ gap: 5 }}
-                                                >
-                                                    <span style={{ width: 13, height: 13, display: 'flex' }}><Icons.Info /></span>
-                                                    Details
-                                                </button>
-                                                <a
-                                                    href={`/verify/${cert.public_id}`}
-                                                    target="_blank" rel="noopener noreferrer"
-                                                    className="btn btn-secondary btn-sm"
-                                                    style={{ gap: 5 }}
-                                                >
-                                                    <span style={{ width: 13, height: 13, display: 'flex' }}><Icons.ExternalLink /></span>
-                                                    Verify
-                                                </a>
-                                                {isSuperAdmin && cert.status !== 'revoked' && (
+                                        {isSuperAdmin && (
+                                            <td>
+                                                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                                                     <button
-                                                        className="btn btn-danger btn-sm"
-                                                        onClick={() => { setSelected(cert); setRevokeOpen(true); }}
+                                                        className="btn btn-secondary btn-sm"
+                                                        onClick={() => { setSelected(cert); fetchCertDetails(cert.public_id); }}
+                                                        style={{ gap: 5 }}
                                                     >
-                                                        Revoke
+                                                        <span style={{ width: 13, height: 13, display: 'flex' }}><Icons.Info /></span>
+                                                        Details
                                                     </button>
-                                                )}
-                                            </div>
-                                        </td>
+                                                    <a
+                                                        href={`/verify/${cert.public_id}`}
+                                                        target="_blank" rel="noopener noreferrer"
+                                                        className="btn btn-secondary btn-sm"
+                                                        style={{ gap: 5 }}
+                                                    >
+                                                        <span style={{ width: 13, height: 13, display: 'flex' }}><Icons.ExternalLink /></span>
+                                                        Verify
+                                                    </a>
+                                                    {cert.status !== 'revoked' && (
+                                                        <button
+                                                            className="btn btn-danger btn-sm"
+                                                            onClick={() => { setSelected(cert); setRevokeOpen(true); }}
+                                                        >
+                                                            Revoke
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
@@ -223,47 +249,25 @@ export default function CertificateList() {
             {/* View Details Modal */}
             <Modal open={viewOpen} onClose={() => setViewOpen(false)}>
                 <div style={{ overflow: 'hidden', borderRadius: 'var(--radius)' }}>
-                    {/* Gradient top bar */}
                     <div style={{ height: 4, background: 'linear-gradient(90deg, var(--c-accent), var(--c-accent-3))' }} />
-                    <div style={{ padding: '24px 24px 28px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-accent-bright)' }}>
-                                    <span style={{ width: 18, height: 18, display: 'flex' }}><Icons.Certificate /></span>
-                                </div>
-                                <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)' }}>Certificate Details</h3>
-                            </div>
-                            <button onClick={() => setViewOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--c-text-muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4 }}>✕</button>
+                    <div style={{ padding: '24px', background: 'var(--c-bg-plate)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--c-text)' }}>Protected Certificate View</h3>
+                            <button onClick={() => setViewOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--c-text-muted)', cursor: 'pointer', fontSize: 20 }}>✕</button>
                         </div>
-                        {selected && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {[
-                                    { label: 'Public ID', value: selected.public_id, mono: true },
-                                    { label: 'Status', value: selected.status ?? 'active' },
-                                    { label: 'Issued At', value: new Date(selected.issued_at).toLocaleString() },
-                                    { label: 'Verifications', value: String(selected.verification_count ?? 0) },
-                                    { label: 'Last Verified', value: selected.last_verified_at ? new Date(selected.last_verified_at).toLocaleString() : 'Never' },
-                                ].map(row => (
-                                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, borderLeft: '2px solid rgba(124,58,237,0.2)' }}>
-                                        <span style={{ fontSize: 12, color: 'var(--c-text-faint)', fontWeight: 600 }}>{row.label}</span>
-                                        <span className={row.mono ? 'mono' : ''} style={{ fontSize: 13, color: row.label === 'Status' ? (selected.status === 'revoked' ? '#fb7185' : 'var(--c-green-bright)') : 'var(--c-text)', fontWeight: 500 }}>{row.value}</span>
-                                    </div>
-                                ))}
-                                {selected.dna_payload && (
-                                    <div>
-                                        <div style={{ fontSize: 11, color: 'var(--c-text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>DNA Payload Preview</div>
-                                        <div className="mono" style={{ padding: '10px 14px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 8, fontSize: 11, color: '#10b981', wordBreak: 'break-all' }}>
-                                            {selected.dna_payload.substring(0, 120)}…
-                                        </div>
-                                    </div>
-                                )}
-                                <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                                    <a href={`/verify/${selected.public_id}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm" style={{ flex: 1, gap: 6 }}>
-                                        <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Verify /></span>
-                                        Verify Now
-                                    </a>
-                                    <button onClick={() => setViewOpen(false)} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>Close</button>
-                                </div>
+
+                        {(selected as any)?.fullData ? (
+                            <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', marginBottom: -80 }}>
+                                <PremiumCertificateCard
+                                    data={(selected as any).fullData}
+                                    publicId={selected!.public_id}
+                                    verificationUrl={`${window.location.origin}/verify/${selected!.public_id}`}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{ padding: 40, textAlign: 'center' }}>
+                                <div className="spinner" style={{ borderTopColor: 'var(--c-accent)' }} />
+                                <div style={{ marginTop: 16, color: 'var(--c-text-muted)' }}>Decrypting DNA payload...</div>
                             </div>
                         )}
                     </div>

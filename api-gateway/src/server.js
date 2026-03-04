@@ -5,16 +5,20 @@ import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import { configureEnvironment } from './config/index.js';
 import { connectDB } from './config/database.js';
+import { seedRootAdmin } from './config/seeder.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger, auditLog } from './utils/logger.js';
 import authRoutes from './routes/authRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
+import draftRoutes from './routes/draftRoutes.js';
 
 // 1. Initialize configuration and environment validation
 const config = configureEnvironment();
 
-// 2. Database Connection
-connectDB(config.mongoUri);
+// 2. Database Connection and Seeding
+connectDB(config.mongoUri).then(() => {
+    seedRootAdmin();
+});
 
 // 3. Initialize Express App
 const app = express();
@@ -99,6 +103,19 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/drafts', draftRoutes);
+
+// Notifications stub: returns empty list (real notifications can be added later)
+// Protected but returns gracefully even without a full Notification model
+app.get('/api/notifications', (req, res) => {
+    res.status(200).json({ success: true, notifications: [] });
+});
+app.put('/api/notifications/read-all', (req, res) => {
+    res.status(200).json({ success: true });
+});
+app.put('/api/notifications/:id/read', (req, res) => {
+    res.status(200).json({ success: true });
+});
 
 // 6. Global Error Handler
 app.use(errorHandler);

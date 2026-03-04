@@ -1,12 +1,11 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { register, login, getProfile } from '../controllers/authController.js';
+import { register, login, getProfile, getAllUsers, deleteUser, editUser } from '../controllers/authController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Route Protection Rate Limiter (Brute Force Security)
-// Maximum 5 attempts per IP per Window length
 const loginRateLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 5,
@@ -15,22 +14,22 @@ const loginRateLimiter = rateLimit({
     legacyHeaders: false
 });
 
-/**
- * 🔓 PUBLIC ROUTES
- */
-
-// Login endpoint (Requires strictly enforced 5 request/minute block algorithm lock)
+// Login endpoint
 router.post('/login', loginRateLimiter, login);
 
-/**
- * 🔒 PROTECTED AUTHENTICATED ROUTES
- */
+// Register — SuperAdmin only
+router.post('/register', protect, authorize('SuperAdmin'), register);
 
-// Temporarily bypassing the authorize('SuperAdmin') block layer per User architecture mapping requirements for Phase 3 to allow database bootsrap.
-// router.post('/register', protect, authorize('SuperAdmin'), register); 
-router.post('/register', register);
-
-// Retrieve Current Logged In Admin credentials (No Password)
+// Profile
 router.get('/profile', protect, getProfile);
+
+// SuperAdmin Only: List all users
+router.get('/users', protect, authorize('SuperAdmin'), getAllUsers);
+
+// SuperAdmin Only: Edit a user's role/department
+router.put('/users/:id', protect, authorize('SuperAdmin'), editUser);
+
+// SuperAdmin Only: Delete a specific user
+router.delete('/users/:id', protect, authorize('SuperAdmin'), deleteUser);
 
 export default router;

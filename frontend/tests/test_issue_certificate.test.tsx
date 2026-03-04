@@ -11,6 +11,13 @@ vi.mock('../src/services/api', () => ({
     },
 }));
 
+vi.mock('../src/context/AuthContext', () => ({
+    useAuth: () => ({
+        isAuthenticated: true,
+        user: { email: 'admin@dna.local', role: 'SuperAdmin' }
+    })
+}));
+
 describe('Issue Certificate Page Tests', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -26,13 +33,13 @@ describe('Issue Certificate Page Tests', () => {
 
     it('renders form inputs correctly', () => {
         renderPage();
-        expect(screen.getByLabelText(/Full Student Name/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/Roll\/Registration Number/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/Degree Program/i)).toBeInTheDocument();
+        expect(screen.getByLabelText('Full Student Name *')).toBeInTheDocument();
+        expect(screen.getByLabelText('Roll / Registration Number *')).toBeInTheDocument();
+        expect(screen.getByLabelText('Degree Program *')).toBeInTheDocument();
     });
 
     it('submits mathematically encrypted certificate', async () => {
-        certificateAPI.issue.mockResolvedValueOnce({
+        (certificateAPI.issue as any).mockResolvedValueOnce({
             success: true,
             public_id: '12345',
             qr_code: 'base64str',
@@ -41,12 +48,12 @@ describe('Issue Certificate Page Tests', () => {
 
         renderPage();
 
-        fireEvent.change(screen.getByLabelText(/Full Student/i), { target: { value: 'John Doe' } });
-        fireEvent.change(screen.getByLabelText(/Roll\/Registration/i), { target: { value: 'CS123' } });
-        fireEvent.change(screen.getByLabelText(/Degree Program/i), { target: { value: 'B.Tech' } });
-        fireEvent.change(screen.getByLabelText(/Specialization\/Department/i), { target: { value: 'CS' } });
-        fireEvent.change(screen.getByLabelText(/Final CGPA/i), { target: { value: '3.8' } });
-        fireEvent.change(screen.getByLabelText(/Graduation Year/i), { target: { value: '2026' } });
+        fireEvent.change(screen.getByLabelText('Full Student Name *'), { target: { value: 'John Doe' } });
+        fireEvent.change(screen.getByLabelText('Roll / Registration Number *'), { target: { value: 'CS123' } });
+        fireEvent.change(screen.getByLabelText('Degree Program *'), { target: { value: 'B.Tech' } });
+        fireEvent.change(screen.getByLabelText('Specialization/Department *'), { target: { value: 'CS' } });
+        fireEvent.change(screen.getByLabelText('Final CGPA (0.00 – 10.00) *'), { target: { value: '3.8' } });
+        fireEvent.change(screen.getByLabelText('Graduation Year *'), { target: { value: '2026' } });
 
         fireEvent.click(screen.getByRole('button', { name: /Commence Encryption/i }));
 
@@ -63,10 +70,10 @@ describe('Issue Certificate Page Tests', () => {
     it('displays error messages natively', async () => {
         const testError = new Error('Test API Failure');
         Object.assign(testError, { response: { data: { error: 'Database Constraint Error' } } });
-        certificateAPI.issue.mockRejectedValueOnce(testError);
+        (certificateAPI.issue as any).mockRejectedValueOnce(testError);
 
         renderPage();
-        fireEvent.change(screen.getByLabelText(/Full Student/i), { target: { value: 'Fake' } });
+        fireEvent.change(screen.getByLabelText('Full Student Name *'), { target: { value: 'Fake' } });
         fireEvent.click(screen.getByRole('button', { name: /Commence Encryption/i }));
 
         // Let assertion await failure mock wrapper
