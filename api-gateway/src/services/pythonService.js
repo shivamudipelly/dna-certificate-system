@@ -30,9 +30,9 @@ export const pythonService = {
             throw new Error('Crypto Engine Encryption Error');
 
         } catch (error) {
-            console.error(`💥 [Crypto Engine Bridge] Encrypt Failed: ${error.message}`);
-            // Fallback gracefully instead of leaking microservice architectures to the end-user
-            throw new Error('Encryption Service temporarily unavailable. Please try again later.');
+            const engineError = error.response?.data?.error || error.message;
+            console.error(`💥 [Crypto Engine Bridge] Encrypt Failed: ${engineError}`);
+            throw new Error(`Encryption Engine Error: ${engineError}`);
         }
     },
 

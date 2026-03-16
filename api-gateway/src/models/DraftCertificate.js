@@ -20,7 +20,8 @@ const DraftCertificateSchema = new mongoose.Schema({
     department: {
         type: String,
         required: [true, 'Department is required'],
-        trim: true
+        trim: true,
+        enum: ['CSE', 'ECE', 'EEE', 'ME', 'CE', 'IT', 'AI&ML', 'DS']
     },
     cgpa: {
         type: Number,

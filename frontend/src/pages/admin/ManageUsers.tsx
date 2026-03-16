@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+const departments = ['CSE', 'ECE', 'EEE', 'ME', 'CE', 'IT', 'AI&ML', 'DS'];
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/Icons';
 import api from '../../services/api';
@@ -42,7 +43,9 @@ function EditModal({ user, onClose, onSaved }: { user: User; onClose: () => void
                 </div>
                 <div className="form-group" style={{ marginBottom: 24 }}>
                     <label className="form-label">Department</label>
-                    <input className="form-input" value={dept} onChange={e => setDept(e.target.value)} placeholder="e.g. Computer Science" />
+                    <select className="form-select" value={dept} onChange={e => setDept(e.target.value)}>
+                        {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
                 </div>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                     <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
@@ -91,7 +94,7 @@ export default function ManageUsers() {
     const [newEmail, setNewEmail] = useState('');
     const [newPass, setNewPass] = useState('');
     const [newRole, setNewRole] = useState<'Clerk' | 'HOD'>('Clerk');
-    const [newDept, setNewDept] = useState('');
+    const [newDept, setNewDept] = useState('CSE');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editUser, setEditUser] = useState<User | null>(null);
     const [deleteUser, setDeleteUserTarget] = useState<User | null>(null);
@@ -108,12 +111,16 @@ export default function ManageUsers() {
 
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newEmail || !newPass || !newDept) { toast.error('Please fill in all fields'); return; }
+        console.log({ newEmail, newPass, newRole, newDept });
+        if (!newEmail.trim() || !newPass.trim() || !newDept.trim()) { 
+            toast.error('Please fill in all fields'); 
+            return; 
+        }
         setIsSubmitting(true);
         try {
             await api.post('/auth/register', { email: newEmail, password: newPass, role: newRole, department: newDept });
             toast.success(`${newRole} account created`);
-            setShowAddForm(false); setNewEmail(''); setNewPass(''); setNewDept(''); setNewRole('Clerk');
+            setShowAddForm(false); setNewEmail(''); setNewPass(''); setNewDept('CSE'); setNewRole('Clerk');
             fetchUsers();
         } catch (err: any) { toast.error(err.response?.data?.error || err.error || 'Failed to create user'); }
         finally { setIsSubmitting(false); }
@@ -147,7 +154,12 @@ export default function ManageUsers() {
                                 <option value="HOD">HOD</option>
                             </select>
                         </div>
-                        <div className="form-group"><label className="form-label">Department *</label><input type="text" className="form-input" value={newDept} onChange={e => setNewDept(e.target.value)} disabled={isSubmitting} placeholder="e.g. Computer Science" /></div>
+                        <div className="form-group">
+                            <label className="form-label">Department *</label>
+                            <select className="form-select" value={newDept} onChange={e => setNewDept(e.target.value)} disabled={isSubmitting}>
+                                {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                        </div>
                         <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
                             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Creating…' : 'Create Account'}</button>
                         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { certificateAPI, draftAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import PremiumCertificateCard from '../../components/certificate/PremiumCertificateCard';
@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/Icons';
 
 const degrees = ['B.Tech', 'M.Tech', 'B.Sc', 'M.Sc', 'Ph.D', 'MBA', 'BCA', 'MCA'];
+const departments = ['CSE', 'ECE', 'EEE', 'ME', 'CE', 'IT', 'AI&ML', 'DS'];
 
 const Field = ({ label, id, children, half = false }: { label: string; id: string; children: React.ReactNode; half?: boolean }) => (
     <div className="form-group" style={{ gridColumn: half ? 'span 1' : 'span 2' }}>
@@ -44,18 +45,32 @@ function Stepper({ active }: { active: number }) {
 
 export default function IssueCertificate() {
     const { user } = useAuth();
-    const [form, setForm] = useState({ studentName: '', rollNumber: '', degree: 'B.Tech', department: user?.department ?? '', graduationYear: String(new Date().getFullYear()), cgpa: '' });
+    const [form, setForm] = useState({ studentName: '', rollNumber: '', degree: 'B.Tech', department: 'CSE', graduationYear: String(new Date().getFullYear()), cgpa: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [step, setStep] = useState<'form' | 'encrypting' | 'done'>('form');
+
+    // Auto-lock the department for clerks
+    useEffect(() => {
+        if (user?.role === 'Clerk' && user.department && departments.includes(user.department)) {
+            setForm(p => ({ ...p, department: user.department as string }));
+        }
+    }, [user]);
 
     const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
         setForm(p => ({ ...p, [field]: e.target.value }));
 
     const validate = () => {
         if (!form.studentName.trim() || !/^[a-zA-Z\s.-]+$/.test(form.studentName)) { toast.error('Valid student name required'); return false; }
-        if (!form.rollNumber.trim() || form.rollNumber.length > 20) { toast.error('Valid roll number required (max 20 chars)'); return false; }
-        if (!form.department.trim()) { toast.error('Department is required'); return false; }
+
+        // Strict Roll Number Validation: 22eg105j38
+        const rollRegex = /^\d{2}[a-z]{2}\d{1,3}[a-z]\d{2,3}$/i;
+        if (!rollRegex.test(form.rollNumber.trim())) {
+            toast.error('Invalid Roll Number format (Expected: 22eg105j38)');
+            return false;
+        }
+
+        if (!form.department.trim() || !departments.includes(form.department)) { toast.error('Valid Department required'); return false; }
         const yr = parseInt(form.graduationYear);
         if (isNaN(yr) || yr < 2000 || yr > 2035) { toast.error('Graduation year must be 2000–2035'); return false; }
         const cg = parseFloat(form.cgpa);
@@ -110,7 +125,14 @@ export default function IssueCertificate() {
     const reset = () => {
         setResult(null);
         setStep('form');
-        setForm({ studentName: '', rollNumber: '', degree: 'B.Tech', department: '', graduationYear: String(new Date().getFullYear()), cgpa: '' });
+        setForm({ 
+            studentName: '', 
+            rollNumber: '', 
+            degree: 'B.Tech', 
+            department: user?.role === 'Clerk' && user?.department ? user.department : 'CSE', 
+            graduationYear: String(new Date().getFullYear()), 
+            cgpa: '' 
+        });
     };
 
     // Encrypting screen
@@ -162,32 +184,31 @@ export default function IssueCertificate() {
 
         return (
             <div className="anim-scale" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 60 }}>
-                <Stepper active={4} />
                 <div style={{
-                    background: 'rgba(16,185,129,0.08)',
-                    border: '1px solid rgba(16,185,129,0.3)',
+                    background: 'rgba(99,102,241,0.08)',
+                    border: '1px solid rgba(99,102,241,0.3)',
                     borderRadius: 'var(--radius)',
                     padding: '18px 22px',
                     marginBottom: 24,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 14,
-                    boxShadow: '0 4px 24px rgba(16,185,129,0.1)',
+                    boxShadow: '0 4px 24px rgba(99,102,241,0.1)',
                 }}>
                     <div style={{
                         width: 44, height: 44, borderRadius: 12,
-                        background: 'rgba(16,185,129,0.15)',
-                        border: '1px solid rgba(16,185,129,0.3)',
+                        background: 'rgba(99,102,241,0.15)',
+                        border: '1px solid rgba(99,102,241,0.3)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'var(--c-green-bright)', flexShrink: 0,
+                        color: 'var(--c-accent-bright)', flexShrink: 0,
                     }}>
-                        <span style={{ width: 22, height: 22, display: 'flex' }}><Icons.Check /></span>
+                        <span style={{ width: 22, height: 22, display: 'flex' }}><Icons.Shield /></span>
                     </div>
                     <div>
                         <div style={{ fontWeight: 700, color: 'var(--c-text)', fontSize: 15 }}>Certificate Issued Successfully</div>
-                        <div style={{ fontSize: 13, color: 'var(--c-text-muted)', marginTop: 2 }}>DNA payload encrypted and stored. Share the QR code below.</div>
+                        <div style={{ fontSize: 13, color: 'var(--c-text-muted)', marginTop: 2 }}>Details recorded and Public ID generated.</div>
                     </div>
-                    <span className="badge badge-green" style={{ marginLeft: 'auto' }}>ISSUED</span>
+                    <span className="badge badge-blue" style={{ marginLeft: 'auto' }}>RECORDED</span>
                 </div>
                 <PremiumCertificateCard
                     data={{
@@ -199,19 +220,35 @@ export default function IssueCertificate() {
                         year: parseInt(form.graduationYear, 10),
                     }}
                     publicId={result.public_id}
-                    verificationUrl={result.verification_url}
-                    qrCodeDataUrl={result.qr_code}
+                    minimal={true}
                 />
-                <div style={{ textAlign: 'center', marginTop: 20 }}>
-                    <button onClick={() => window.print()} className="btn btn-secondary" style={{ gap: 8, marginRight: 8 }}>
-                        <span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Print /></span>
-                        Print Certificate
+                <div style={{ textAlign: 'center', marginTop: 30, display: 'flex', justifyContent: 'center', gap: 12 }}>
+                    <button onClick={reset} className="btn btn-primary btn-lg" style={{ gap: 8, padding: '12px 32px' }}>
+                        <span style={{ width: 18, height: 18, display: 'flex' }}><Icons.Check /></span>
+                        Done & Close
                     </button>
-                    <button onClick={reset} className="btn btn-primary" style={{ gap: 8 }}>
-                        <span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Issue /></span>
-                        Issue Another Document
+                    <button onClick={reset} className="btn btn-secondary btn-lg" style={{ gap: 8, padding: '12px 32px' }}>
+                        <span style={{ width: 18, height: 18, display: 'flex' }}><Icons.Issue /></span>
+                        Issue Another
                     </button>
                 </div>
+            </div>
+        );
+    }
+
+    // Redirect SuperAdmin to the proper 3-step workflow (Review Drafts → Issue)
+    if (user?.role === 'SuperAdmin') {
+        return (
+            <div style={{ maxWidth: 720, margin: '60px auto', textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+                <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--c-text)', marginBottom: 8 }}>Use the 3-Step Workflow</h2>
+                <p style={{ color: 'var(--c-text-muted)', marginBottom: 28, lineHeight: 1.7 }}>
+                    Certificates are issued via the <strong>Review Drafts</strong> page after a Clerk submits and an HOD verifies them.
+                    <br />Click below to review verified drafts and issue certificates.
+                </p>
+                <a href="/admin/drafts" className="btn btn-primary" style={{ padding: '12px 32px', fontSize: 15, textDecoration: 'none' }}>
+                    📋 Go to Review Drafts
+                </a>
             </div>
         );
     }
@@ -270,7 +307,9 @@ export default function IssueCertificate() {
                                 </select>
                             </Field>
                             <Field id="department" label="Specialization/Department *" half>
-                                <input id="department" type="text" className="form-input" placeholder="Computer Science & Engineering" value={form.department} onChange={set('department')} disabled={isSubmitting || user?.role === 'Clerk'} />
+                                <select id="department" className="form-select" value={form.department} onChange={set('department')} disabled={isSubmitting || user?.role === 'Clerk'}>
+                                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
                             </Field>
                             <Field id="graduationYear" label="Graduation Year *" half>
                                 <input id="graduationYear" type="number" className="form-input" min={2000} max={2035} value={form.graduationYear} onChange={set('graduationYear')} disabled={isSubmitting} />

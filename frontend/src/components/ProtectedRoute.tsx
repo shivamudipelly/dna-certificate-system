@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 /**
  * Strict View Guard checking in-memory state mapping
  */
-const ProtectedRoute = ({ allowedRoles = [] }) => {
+const ProtectedRoute = ({ allowedRoles = [] }: { allowedRoles?: string[] }) => {
     const { isAuthenticated, user, isLoading } = useAuth();
 
     if (isLoading) {
@@ -17,7 +17,7 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
 
     // Intercept unauthenticated users strictly routing back to standard index
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/admin-access" replace />;
     }
 
     // Handle explicitly allowed role mappings if passed to the route block

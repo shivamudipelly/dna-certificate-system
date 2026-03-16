@@ -2,7 +2,7 @@
 
 ## Overview
 
-The DNA Certificate System is designed with a **Zero Trust, defence-in-depth** security model. Every layer independently validates inputs, authentication, and data integrity — no single layer's compromise can reveal plaintext certificate data.
+The University Certificate Verification System is designed with a **Zero Trust, defence-in-depth** security model. Every layer independently validates inputs, authentication, and data integrity — no single layer's compromise can reveal plaintext certificate data.
 
 ---
 
@@ -117,10 +117,10 @@ express.json({ limit: '10kb' })
 ### Authorization — Role-Based Access Control
 | Operation | Clerk | HOD | SuperAdmin |
 |---|---|---|---|
-| Issue certificates | ✅ | ✅ | ✅ |
-| View own certificates | ✅ | ✅ | ✅ |
+| Issue certificates | ❌ | ✅ | ✅ |
+| View registry (metadata) | ✅ | ✅ | ✅ |
 | Revoke certificates | ❌ | ❌ | ✅ only |
-| Public verification | N/A (public) | N/A | N/A |
+| Public verification | N/A | N/A | N/A |
 
 ---
 

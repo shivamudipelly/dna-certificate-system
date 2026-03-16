@@ -1,5 +1,5 @@
 # ============================================================
-# DNA Certificate System — API Gateway
+# University Certificate Verification System — API Gateway
 # Base: node:18-alpine  |  Exposes: 5000
 # ============================================================
 

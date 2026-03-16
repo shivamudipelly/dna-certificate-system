@@ -21,11 +21,21 @@ const checkValidations = (req, res) => {
 export const createDraft = async (req, res, next) => {
     try {
         if (!checkValidations(req, res)) return;
+
+        // Guard: Clerk MUST have a department assigned in their account
+        if (req.admin.role === 'Clerk' && !req.admin.department) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Your account has no department assigned. Please contact the SuperAdmin to assign you a department before creating drafts.' 
+            });
+        }
+
         const draft = await DraftCertificate.create({
             name: req.body.name,
             roll: req.body.roll,
             degree: req.body.degree,
-            department: req.body.department,
+            // SECURITY: If Clerk, force their own department mathematically
+            department: req.admin.role === 'Clerk' ? req.admin.department : req.body.department,
             cgpa: req.body.cgpa,
             year: req.body.year,
             createdBy: req.admin._id,
@@ -60,7 +70,8 @@ export const editDraft = async (req, res, next) => {
         draft.name = req.body.name;
         draft.roll = req.body.roll;
         draft.degree = req.body.degree;
-        draft.department = req.body.department;
+        // SECURITY: If Clerk, force their own department mathematically; else accept payload
+        draft.department = req.admin.role === 'Clerk' ? req.admin.department : req.body.department;
         draft.cgpa = req.body.cgpa;
         draft.year = req.body.year;
         await draft.save();
@@ -75,7 +86,10 @@ export const getDrafts = async (req, res, next) => {
         if (req.admin.role === 'Clerk') {
             query = { createdBy: req.admin._id };
         } else if (req.admin.role === 'HOD') {
-            query = { status: { $in: ['Submitted', 'RevertedToHOD'] } };
+            query = { 
+                status: { $in: ['Submitted', 'RevertedToHOD'] },
+                department: req.admin.department
+            };
         } else if (req.admin.role === 'SuperAdmin') {
             query = { status: 'Verified' };
         }
@@ -122,6 +136,11 @@ export const verifyDraft = async (req, res, next) => {
         if (!['Submitted', 'RevertedToHOD'].includes(draft.status)) {
             return res.status(400).json({ success: false, error: 'Only Submitted or RevertedToHOD drafts can be verified' });
         }
+
+        // HOD Authorization Check: Must match draft's department
+        if (req.admin.role === 'HOD' && draft.department !== req.admin.department) {
+            return res.status(403).json({ success: false, error: 'Forbidden: You can only verify drafts for your own department' });
+        }
         draft.status = 'Verified';
         draft.remarks = null;
         await draft.save();
@@ -149,6 +168,11 @@ export const revertToClerk = async (req, res, next) => {
 
         draft.status = 'Reverted';
         draft.remarks = remarks;
+        
+        // HOD Authorization Check: Must match draft's department
+        if (req.admin.role === 'HOD' && draft.department !== req.admin.department) {
+            return res.status(403).json({ success: false, error: 'Forbidden: You can only revert drafts for your own department' });
+        }
         await draft.save();
 
         await AuditLog.create({
@@ -221,6 +245,10 @@ export const approveDraft = async (req, res, next) => {
             public_id,
             student_name: certificateData.name,
             roll_number: certificateData.roll,
+            department: certificateData.department,
+            degree: certificateData.degree,
+            cgpa: certificateData.cgpa,
+            year: certificateData.year,
             dna_payload,
             chaotic_seed,
             certificate_hash,

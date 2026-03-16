@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Icons } from '../Icons';
+
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 

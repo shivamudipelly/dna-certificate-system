@@ -1,5 +1,5 @@
 # ============================================================
-# DNA Certificate System — Frontend (Multi-Stage Build)
+# University Certificate Verification System — Frontend
 # Stage 1 (builder): node:18-alpine  — Vite production build
 # Stage 2 (serve):   nginx:alpine    — Serve static assets
 # Exposes: 80

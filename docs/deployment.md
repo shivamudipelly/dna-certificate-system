@@ -10,8 +10,8 @@
 ### Step 1 — Clone and Configure
 
 ```bash
-git clone https://github.com/your-org/dna-certificate-system.git
-cd dna-certificate-system
+git clone https://github.com/your-org/ucvs.git
+cd ucvs
 ```
 
 Copy example env files:

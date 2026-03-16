@@ -1,6 +1,6 @@
 # User Guide
 
-This guide covers how to use the DNA Certificate System as an **Admin** (issuing and managing certificates) or as a **Verifier** (verifying certificates). No technical knowledge is required.
+This guide covers how to use the University Certificate Verification System as an **Admin** (issuing and managing certificates) or as a **Verifier** (verifying certificates). No technical knowledge is required.
 
 ---
 
@@ -8,9 +8,9 @@ This guide covers how to use the DNA Certificate System as an **Admin** (issuing
 
 Admins use the dashboard to issue certificates, view issued certificates, and download QR codes. There are three admin roles:
 
-| Role | Can Issue | Can View Own | Can Revoke |
+| Role | Can Issue | Can View Registry | Can Revoke |
 |---|---|---|---|
-| Clerk | ✅ | ✅ | ❌ |
+| Clerk | ❌ | ✅ | ❌ |
 | HOD | ✅ | ✅ | ❌ |
 | SuperAdmin | ✅ | ✅ | ✅ |
 
@@ -39,7 +39,8 @@ If you see **"Invalid credentials"** — check your email and password carefully
 |---|---|---|
 | **Student Name** | Full legal name | `Anjali Sharma` |
 | **Roll Number** | Institutional ID | `CS2021001` |
-| **Degree** | Full degree name | `B.Tech Computer Science` |
+| **Degree** | Full degree name | `B.Tech` |
+| **Department** | Academic dept | `Computer Science` |
 | **CGPA** | Grade point average (0.00 – 10.00) | `8.75` |
 | **Graduation Year** | Year of degree completion | `2024` |
 

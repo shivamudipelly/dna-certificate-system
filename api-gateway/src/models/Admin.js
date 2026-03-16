@@ -23,7 +23,8 @@ const AdminSchema = new mongoose.Schema({
     department: {
         type: String,
         trim: true,
-        default: null
+        default: null,
+        enum: ['CSE', 'ECE', 'EEE', 'ME', 'CE', 'IT', 'AI&ML', 'DS', null]
     },
     is_root: {
         type: Boolean,

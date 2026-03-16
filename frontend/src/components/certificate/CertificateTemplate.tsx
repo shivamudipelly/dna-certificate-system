@@ -1,5 +1,4 @@
-import React from 'react';
-import { Certificate, DecryptedMetadata } from '../../types';
+import type { DecryptedMetadata } from '../../types';
 
 interface TemplateProps {
     metadata: DecryptedMetadata;
@@ -41,11 +40,11 @@ const CertificateTemplate = ({ metadata, publicId, issueDate, verificationDate, 
                         This is to certify that
                     </p>
                     <h2 className="text-5xl sm:text-6xl font-bold text-primary-900 font-serif pb-4 tracking-tight">
-                        {metadata.studentName}
+                        {metadata.name}
                     </h2>
 
                     <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-8 text-gray-700 bg-gray-50 py-4 px-8 rounded-full shadow-inner inline-flex">
-                        <p><span className="text-gray-500 font-medium">Roll No:</span> <strong className="font-mono">{metadata.rollNumber}</strong></p>
+                        <p><span className="text-gray-500 font-medium">Roll No:</span> <strong className="font-mono">{metadata.roll}</strong></p>
                         <span className="hidden sm:inline w-1 h-1 bg-gray-300 rounded-full"></span>
                         <p><span className="text-gray-500 font-medium">CGPA:</span> <strong>{metadata.cgpa}</strong></p>
                     </div>
@@ -57,7 +56,7 @@ const CertificateTemplate = ({ metadata, publicId, issueDate, verificationDate, 
                     <div className="space-y-2 text-primary-800 pb-8">
                         <h3 className="text-3xl sm:text-4xl font-black uppercase tracking-widest">{metadata.degree}</h3>
                         <h4 className="text-2xl sm:text-3xl font-medium text-gray-700">Department of {metadata.department}</h4>
-                        <p className="text-lg text-gray-500 tracking-wider uppercase pt-2">Class of {metadata.graduationYear}</p>
+                        <p className="text-lg text-gray-500 tracking-wider uppercase pt-2">Class of {metadata.year}</p>
                     </div>
                 </div>
 

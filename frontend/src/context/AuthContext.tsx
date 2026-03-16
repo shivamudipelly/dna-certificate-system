@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI, setAuthToken, getStoredToken } from '../services/api';
 import toast from 'react-hot-toast';
-import { AdminUser, AuthLoginResponse, AuthProfileResponse } from '../types';
+import type { AdminUser, AuthLoginResponse, AuthProfileResponse } from '../types';
 
 interface AuthContextType {
     user: AdminUser | null;

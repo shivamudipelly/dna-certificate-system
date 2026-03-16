@@ -1,62 +1,104 @@
-# API Gateway - DNA Certificate System
+# 📡 API Gateway - University Certification Microservice
 
-The API Gateway is the primary Node.js microservice responsible for orchestrating external traffic, managing Admin JWT authentication, issuing new certificates, generating verification URIs/QRs, and communicating directly with the internal Python Crypto Engine.
-
----
-
-## 🏗️ Architecture Stack
-*   **Runtime:** Node.js (ES6 Modules)
-*   **Framework:** Express.js (v4)
-*   **Database:** MongoDB Atlas (Mongoose v8)
-*   **Authentication:** JWT (HMAC-SHA256) & bcryptjs
-*   **Security:** Helmet, Express Rate Limit, Express Validator, CORS
+The API Gateway is the central Node.js orchestrator of the University Certificate System. It manages the public-facing API, handles secure administrator authentication, routes cryptographic requests to the internal DNA engine, and maintains the primary metadata registry in MongoDB.
 
 ---
 
-## 🔒 Security Posture
-*   **Rate Limiting:**
-    *   `/api/auth/login`: 5 requests / minute per IP (Brute-force protection).
-    *   `/api/certificates/verify`: 100 requests / minute per IP (Scraper protection).
-*   **Input Sanitization:** Global regex filters drop any `<script>` or SQL injection characters before parsing.
-*   **RBAC (Role-Based Access Control):** Granular middleware ensures `Clerks` vs `SuperAdmins` are isolated to their permitted routes.
-*   **Internal API Bridge:** The `pythonService` uses an internal 30-second timeout Axios bridge attaching strict headers (`x-api-key: gateway-secret-token`) to secure communication with the internal mathematical Python module.
-*   **Zero-Knowledge Leakage:** `dna_payload` is strictly filtered out of all API responses except when querying the Crypto Engine natively.
+## ⚡ Core Responsibilities
+
+- 🔐 **JWT Authentication & RBAC** — Issues and validates 24-hour JSON Web Tokens. Enforces granular route access for `SuperAdmin`, `HOD`, and `Clerk` roles.
+- 🧬 **Crypto Orchestration** — Communicates with the internal Python Crypto Engine using high-speed Axios streams and shared `x-api-key` validation.
+- 🗄️ **Metadata Registry** — Stores only the `public_id`, `dna_payload` (encrypted), `chaotic_seed`, and `certificate_hash`. Original student data is **never** stored in plaintext.
+- 🖼️ **QR & Verification** — Generates Base64-encoded QR codes and unique verification URLs pointing directly to the public portal for every certificate issued.
+- 🛡️ **Defensive Middleware** — Implements a robust security stack (Helmet, CORS, Rate Limiters, and XSS Sanitization) to block brute-force and injection attacks.
 
 ---
 
-## 🚀 Deployment (Docker Compose)
+## 🏗️ Technical Architecture
 
-The easiest way to deploy this microservice in production alongside the Crypto Engine is via Docker. 
+- **Runtime:** Node.js 18.x (ESM)
+- **Framework:** Express 5.x
+- **Database:** MongoDB Atlas (Mongoose v8)
+- **Security:** 
+    - `jsonwebtoken` — HMAC-SHA256 tokens.
+    - `bcryptjs` — Salted hashing for administrator passwords.
+    - `express-rate-limit` — Brute-force and DDoS protection.
+    - `express-validator` — Strict JSON schema enforcement.
+- **Logging:** Winston (Rotated JSON logs for audit trails).
 
-**Prerequisites:**
-*   Docker & Docker Compose installed on your VPS (Ubuntu/Debian recommended).
-*   A valid MongoDB Atlas string.
+---
 
-**1. Create a `.env` file in the root `api-gateway` folder:**
-```env
-PORT=5000
-MONGO_URI=mongodb+srv://<user>:<password>@cluster0.ex.mongodb.net/dna_certs?retryWrites=true&w=majority
-JWT_SECRET=production-grade-super-secret-key-at-least-32-chars!
-CRYPTO_ENGINE_URL=http://crypto-engine:8000
-FRONTEND_URL=https://your-production-domain.com
-```
+## 🚀 Getting Started
 
-**2. Deploy using Docker Compose (From the project root):**
+### Prerequisites
+- Node.js 18+
+- MongoDB instance (Local or Atlas)
+- Running [Crypto Engine](../crypto-engine/)
+
+### Setup Instructions
+1.  **Clone and Install:**
+    ```bash
+    cd api-gateway
+    npm install
+    ```
+2.  **Configure Environment:**
+    Create a `.env` file based on `.env.example`:
+    ```env
+    PORT=5000
+    MONGO_URI=mongodb+srv://...
+    JWT_SECRET=super-secret-key
+    CRYPTO_ENGINE_URL=http://localhost:8000
+    ENGINE_API_KEY=shared-secret
+    FRONTEND_URL=http://localhost:5173
+    ```
+
+### Running the API
 ```bash
-docker-compose up -d --build
+npm run dev     # Development (with nodemon)
+npm start       # Production
 ```
 
 ---
 
-## 📡 API Endpoints
+## 📡 API Endpoints (Pinch by Inch)
 
 ### 1. Authentication (`/api/auth`)
-*   `POST /register` - Registers an Admin account.
-*   `POST /login` - Public endpoint. Returns a JWT.
-*   `GET /profile` - Validates the Bearer token and returns current user context.
+| Method | Endpoint | Access | Usage |
+|---|---|---|---|
+| `POST` | `/register` | Public | Register an administrator (SuperAdmin/HOD). |
+| `POST` | `/login` | Public | Authenticate and receive a JWT. |
+| `GET` | `/profile` | JWT Auth | Returns current admin identity. |
 
 ### 2. Certificates (`/api/certificates`)
-*   `POST /` - Protect. Generates a new DNA Sequence via the Crypto Engine, stores record locally, and returns the QR URI.
-*   `GET /` - Protect. Returns a paginated list of all certificates generated by the logged-in Administrator.
-*   `GET /verify/:public_id` - Public endpoint. Extracts DNA strings from DB, validates the hash over Python bridge, and returns verified student records. Returns `403 TAMPERED` if any data bits are altered.
-*   `PUT /:public_id/revoke` - Protected (SuperAdmin ONLY). Toggles revocation kill-switch on a Certificate.
+| Method | Endpoint | Access | Role | Usage |
+|---|---|---|---|---|
+| `POST` | `/` | JWT Auth | HOD/S.Admin | Encrypt & Issue a new certificate. |
+| `GET` | `/` | JWT Auth | Any Admin | View registry (paginated, metadata-only). |
+| `GET` | `/verify/:id` | Public | None | Decrypt & Verify a certificate ID. |
+| `PUT` | `/:id/revoke` | JWT Auth | SuperAdmin | Permantly revoke a record. |
+
+---
+
+## 🧪 Testing and Quality Control
+
+We maintain a high-coverage test suite using Jest.
+```bash
+npm test                      # Run all unit and integration tests
+npm test -- tests/auth.js     # Run specific test suite
+```
+
+### Coverage Thresholds
+- **Statements:** 85%+
+- **Branches:** 75%+
+- **Functions:** 90%+
+
+---
+
+## 📁 System Directory Breakdown
+
+- `src/controllers/` — Request handlers and primary business logic.
+- `src/models/` — Mongoose schemas for `Admin`, `Certificate`, and `AuditLog`.
+- `src/routes/` — Endpoint definitions and role-aware middleware attachments.
+- `src/services/` — The `pythonService` bridge and `qrService` barcode logic.
+- `src/middleware/` — Auth guards, role authorization, and the universal `errorHandler`.
+- `tests/` — Automated test suites for all core functionality.

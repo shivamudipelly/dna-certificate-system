@@ -9,7 +9,7 @@ function Particles() {
     useEffect(() => {
         const container = document.getElementById('login-particles');
         if (!container) return;
-        const particles = Array.from({ length: 14 }, (_, i) => {
+        const particles = Array.from({ length: 14 }, (_, _i) => {
             const p = document.createElement('div');
             p.className = 'particle';
             const size = Math.random() * 4 + 2;
@@ -142,7 +142,7 @@ export default function Login() {
                         </div>
                         <div>
                             <div style={{ fontSize: 20, fontWeight: 900, color: '#ffffff' }}>University Portal</div>
-                            <div style={{ fontSize: 13, color: 'var(--c-text-faint)', marginTop: 2 }}>Certificate Verification System</div>
+                            <div style={{ fontSize: 13, color: 'var(--c-text-faint)', marginTop: 2 }}>Certificate Management System</div>
                         </div>
                     </div>
 
@@ -160,8 +160,8 @@ export default function Login() {
                 {/* Feature badges */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', position: 'relative', zIndex: 1 }}>
                     {[
-                        { bg: 'rgba(124,58,237,0.2)', icon: '🛡️', text: 'Bank-Grade Security', sub: 'End-to-end protected records' },
-                        { bg: 'rgba(16,185,129,0.2)', icon: '✅', text: 'Instant Verification', sub: 'Scan QR codes instantly' },
+                        { bg: 'rgba(124,58,237,0.2)', icon: '🛡️', text: 'DNA-Protected Records', sub: 'Tamper-proof encryption' },
+                        { bg: 'rgba(16,185,129,0.2)', icon: '✅', text: 'Secure Issuance', sub: 'Verified by university HODs' },
                         { bg: 'rgba(6,182,212,0.2)', icon: '👥', text: 'Granular Permissions', sub: 'Secure role-based access' },
                     ].map(f => (
                         <div key={f.text} className="feature-badge">
@@ -268,11 +268,10 @@ export default function Login() {
                             </div>
                         ))}
                     </div>
-
                     {/* Public verify link */}
                     <div style={{ textAlign: 'center', marginTop: 24 }}>
-                        <a href="/verify" style={{ fontSize: 13, color: 'var(--c-accent-bright)', textDecoration: 'none', fontWeight: 500 }}>
-                            🔍 Verify a certificate publicly →
+                        <a href="/" style={{ fontSize: 13, color: 'var(--c-accent-bright)', textDecoration: 'none', fontWeight: 500 }}>
+                            🔍 Return to Certificate Verification →
                         </a>
                     </div>
                 </div>

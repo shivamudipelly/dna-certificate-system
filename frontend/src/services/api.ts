@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {
+import type {
     AuthLoginResponse,
     AuthProfileResponse,
     CertificateListResponse,
@@ -53,6 +53,9 @@ api.interceptors.response.use(
         if (!response) {
             return Promise.reject({ success: false, error: 'Network connection failed. Check your connection.' });
         }
+
+        console.error('[API Error Body]:', response.data);
+
         if (response.status === 401) {
             setAuthToken(null);
             window.dispatchEvent(new CustomEvent('auth:expired'));
@@ -62,7 +65,7 @@ api.interceptors.response.use(
             return Promise.reject({ success: false, error: response.data?.error || 'Access forbidden.' });
         }
         if (response.status >= 500) {
-            return Promise.reject({ success: false, error: 'Server error. Please try again shortly.' });
+            return Promise.reject({ success: false, error: response.data?.error || 'Server error. Please try again shortly.' });
         }
         const message = response.data?.error || response.data?.message || 'An unexpected error occurred';
         return Promise.reject({ success: false, error: message });
@@ -79,6 +82,7 @@ export const certificateAPI = {
     listMe: (page: number = 1): Promise<CertificateListResponse> => api.get(`/certificates?page=${page}`),
     issue: (certData: CertificateIssuePayload): Promise<CertificateIssueResponse> => api.post('/certificates', certData),
     revoke: (publicId: string): Promise<ApiResponse> => api.put(`/certificates/${publicId}/revoke`),
+    reissue: (publicId: string, certData: CertificateIssuePayload): Promise<ApiResponse> => api.put(`/certificates/${publicId}/reissue`, certData),
 };
 
 export const draftAPI = {

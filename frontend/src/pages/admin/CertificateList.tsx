@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { certificateAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Certificate, CertificateListResponse } from '../../types';
+import type { Certificate, CertificateListResponse } from '../../types';
 import { Icons } from '../../components/Icons';
 import PremiumCertificateCard from '../../components/certificate/PremiumCertificateCard';
 
@@ -32,9 +32,24 @@ export default function CertificateList() {
     const [viewOpen, setViewOpen] = useState(false);
     const [revokeOpen, setRevokeOpen] = useState(false);
     const [revoking, setRevoking] = useState(false);
+    const [isCheckingHealth, setIsCheckingHealth] = useState(false);
+    const [healthStatus, setHealthStatus] = useState<Record<string, 'OK' | 'TAMPERED' | 'CHECKING'>>({});
+    const [repairOpen, setRepairOpen] = useState(false);
+    const [repairing, setRepairing] = useState(false);
+    const [createNewId, setCreateNewId] = useState(false);
+    const [repairForm, setRepairForm] = useState({
+        name: '',
+        roll: '',
+        degree: '',
+        department: '',
+        year: '',
+        cgpa: ''
+    });
+
+    const departments = ['CSE', 'ECE', 'EEE', 'ME', 'CE', 'IT', 'AI&ML', 'DS'];
 
     const isSuperAdmin = user?.role === 'SuperAdmin';
-    const isClerk = user?.role === 'Clerk';
+
 
     const fetchCerts = async (page: number) => {
         setIsLoading(true);
@@ -45,12 +60,86 @@ export default function CertificateList() {
                 setTotalPages(res.pages ?? 1);
                 setTotalCount(res.total ?? 0);
                 setCurrentPage(page);
+                // Clear health status on page change
+                setHealthStatus({});
             }
         } catch { toast.error('Failed to load certificates'); }
         finally { setIsLoading(false); }
     };
 
     useEffect(() => { fetchCerts(1); }, []);
+
+    const runHealthCheck = async () => {
+        setIsCheckingHealth(true);
+        const newHealth: Record<string, 'OK' | 'TAMPERED' | 'CHECKING'> = { ...healthStatus };
+
+        for (const cert of filtered) {
+            newHealth[cert.public_id] = 'CHECKING';
+            setHealthStatus({ ...newHealth });
+            try {
+                await certificateAPI.verify(cert.public_id);
+                newHealth[cert.public_id] = 'OK';
+            } catch (err: any) {
+                if (err.error === 'TAMPERED') {
+                    newHealth[cert.public_id] = 'TAMPERED';
+                } else {
+                    newHealth[cert.public_id] = 'OK'; // Ignore network/404 for health check
+                }
+            }
+            setHealthStatus({ ...newHealth });
+        }
+        setIsCheckingHealth(false);
+        toast.success('Institutional Health Check Complete');
+    };
+
+    const executeRepair = async () => {
+        if (!selected) return;
+
+        // --- Manual Enrichment Validation ---
+        if (!repairForm.name || !repairForm.roll || !repairForm.degree || !repairForm.department) {
+            toast.error('Please fill in Name, Roll No, Degree, and Department');
+            return;
+        }
+
+        const yearNum = parseInt(repairForm.year.toString());
+        const cgpaNum = parseFloat(repairForm.cgpa.toString());
+
+        if (isNaN(yearNum) || yearNum < 1990 || yearNum > 2100) {
+            toast.error('Please enter a valid Graduation Year (1990-2100)');
+            return;
+        }
+        if (isNaN(cgpaNum) || cgpaNum < 0 || cgpaNum > 10) {
+            toast.error('Please enter a valid CGPA (0.0 - 10.0)');
+            return;
+        }
+
+        setRepairing(true);
+        try {
+            const res = await certificateAPI.reissue(selected.public_id, {
+                name: repairForm.name.trim(),
+                roll: repairForm.roll.trim(),
+                degree: repairForm.degree.trim(),
+                department: repairForm.department,
+                year: yearNum,
+                cgpa: cgpaNum,
+                createNewId
+            }) as any;
+
+            if (res?.success) {
+                toast.success('Certificate Re-issued and Fixed!');
+                setRepairOpen(false);
+                fetchCerts(currentPage);
+            } else {
+                // This branch handles 200-series responses that signify failure (if any)
+                toast.error(res?.error || 'Repair failed: Backend rejected the update');
+            }
+        } catch (err: any) {
+            console.error('[Repair Debug]:', err);
+            toast.error(err.error || 'An unexpected error occurred during repair');
+        } finally {
+            setRepairing(false);
+        }
+    };
 
     // Fetch full certificate details for the modal
     const fetchCertDetails = async (publicId: string) => {
@@ -59,11 +148,15 @@ export default function CertificateList() {
             const res = await certificateAPI.verify(publicId) as any;
             if (res?.success) {
                 setSelected({ ...selected, fullData: res.data } as any);
-                setViewOpen(true);
             }
         } catch (err: any) {
-            toast.error(err.error || 'Failed to decrypt certificate data');
+            if (err.error === 'TAMPERED') {
+                toast.error('Cryptographic Tampering Detected - Showing Registry Data');
+            } else {
+                toast.error(err.error || 'Failed to decrypt certificate data');
+            }
         } finally {
+            setViewOpen(true);
             setIsLoading(false);
         }
     };
@@ -102,10 +195,23 @@ export default function CertificateList() {
                     <h2>Certificate Registry</h2>
                     <p>{totalCount} certificate{totalCount !== 1 ? 's' : ''} issued · Page {currentPage} of {totalPages}</p>
                 </div>
-                <button onClick={() => fetchCerts(currentPage)} className="btn btn-secondary btn-sm" style={{ gap: 6 }}>
-                    <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Activity /></span>
-                    Refresh
-                </button>
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                        onClick={runHealthCheck}
+                        className={`btn ${isCheckingHealth ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                        disabled={isCheckingHealth || isLoading}
+                        style={{ gap: 6 }}
+                    >
+                        <span style={{ width: 14, height: 14, display: 'flex' }}>
+                            {isCheckingHealth ? <div className="spinner" /> : <Icons.Shield />}
+                        </span>
+                        {isCheckingHealth ? 'Scanning Registry...' : 'Institutional Health Check'}
+                    </button>
+                    <button onClick={() => fetchCerts(currentPage)} className="btn btn-secondary btn-sm" style={{ gap: 6 }}>
+                        <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Activity /></span>
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -173,9 +279,17 @@ export default function CertificateList() {
                                         <td style={{ fontWeight: 600 }}>{cert.student_name ?? '—'}</td>
                                         <td className="mono">{cert.roll_number ?? '—'}</td>
                                         <td>
-                                            <span className={`badge ${cert.status === 'revoked' ? 'badge-red' : 'badge-green'}`}>
-                                                {cert.status ?? 'active'}
-                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <span className={`badge ${cert.status === 'revoked' ? 'badge-red' : 'badge-green'}`}>
+                                                    {cert.status ?? 'active'}
+                                                </span>
+                                                {healthStatus[cert.public_id] === 'TAMPERED' && (
+                                                    <span className="badge badge-red" style={{ animation: 'pulse-dot 1.5s infinite' }}>TAMPERED</span>
+                                                )}
+                                                {healthStatus[cert.public_id] === 'CHECKING' && (
+                                                    <div className="spinner spinner-xs" />
+                                                )}
+                                            </div>
                                         </td>
                                         <td>{new Date(cert.issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                                         <td style={{ color: 'var(--c-text)', fontWeight: 600 }}>{cert.verification_count ?? 0}</td>
@@ -193,15 +307,27 @@ export default function CertificateList() {
                                                         <span style={{ width: 13, height: 13, display: 'flex' }}><Icons.Info /></span>
                                                         Details
                                                     </button>
-                                                    <a
-                                                        href={`/verify/${cert.public_id}`}
-                                                        target="_blank" rel="noopener noreferrer"
-                                                        className="btn btn-secondary btn-sm"
-                                                        style={{ gap: 5 }}
-                                                    >
-                                                        <span style={{ width: 13, height: 13, display: 'flex' }}><Icons.ExternalLink /></span>
-                                                        Verify
-                                                    </a>
+                                                    {healthStatus[cert.public_id] === 'TAMPERED' && (
+                                                        <button
+                                                            className="btn btn-primary btn-sm"
+                                                            onClick={() => {
+                                                                setSelected(cert);
+                                                                setRepairForm({
+                                                                    name: cert.student_name || '',
+                                                                    roll: cert.roll_number || '',
+                                                                    degree: (cert as any).degree || '',
+                                                                    department: cert.department || '',
+                                                                    year: ((cert as any).year || '').toString(),
+                                                                    cgpa: ((cert as any).cgpa || '').toString()
+                                                                });
+                                                                setRepairOpen(true);
+                                                            }}
+                                                            style={{ gap: 5, background: 'var(--c-amber)', borderColor: 'var(--c-amber)' }}
+                                                        >
+                                                            <span style={{ width: 13, height: 13, display: 'flex' }}><Icons.Shield /></span>
+                                                            Repair
+                                                        </button>
+                                                    )}
                                                     {cert.status !== 'revoked' && (
                                                         <button
                                                             className="btn btn-danger btn-sm"
@@ -261,8 +387,26 @@ export default function CertificateList() {
                                 <PremiumCertificateCard
                                     data={(selected as any).fullData}
                                     publicId={selected!.public_id}
-                                    verificationUrl={`${window.location.origin}/verify/${selected!.public_id}`}
+                                    minimal={true}
                                 />
+                            </div>
+                        ) : selected ? (
+                            <div style={{ padding: 24 }}>
+                                <div style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 12, padding: 16, marginBottom: 20, display: 'flex', gap: 12, color: 'var(--c-red)' }}>
+                                    <Icons.Shield />
+                                    <div>
+                                        <div style={{ fontWeight: 700 }}>DNA Sequence Tampered</div>
+                                        <div style={{ fontSize: 13 }}>Encrypted data is invalid. Showing unencrypted registry record.</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                    <div><label style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>STUDENT</label><div style={{ fontWeight: 600 }}>{selected.student_name}</div></div>
+                                    <div><label style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>ROLL NO</label><div className="mono">{selected.roll_number}</div></div>
+                                    <div><label style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>DEGREE</label><div>{selected.degree || '—'}</div></div>
+                                    <div><label style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>DEPT</label><div>{selected.department}</div></div>
+                                    <div><label style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>CGPA</label><div>{selected.cgpa || '—'}</div></div>
+                                    <div><label style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>YEAR</label><div>{selected.year || '—'}</div></div>
+                                </div>
                             </div>
                         ) : (
                             <div style={{ padding: 40, textAlign: 'center' }}>
@@ -299,6 +443,114 @@ export default function CertificateList() {
                             <button className="btn btn-secondary btn-full" onClick={() => setRevokeOpen(false)} disabled={revoking}>Cancel</button>
                             <button className="btn btn-danger btn-full" onClick={executeRevoke} disabled={revoking} style={{ gap: 6 }}>
                                 {revoking ? <><div className="spinner" />Revoking…</> : 'Confirm Revoke'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+            {/* Repair Confirmation Modal */}
+            <Modal open={repairOpen} onClose={() => !repairing && setRepairOpen(false)}>
+                <div style={{ overflow: 'hidden', borderRadius: 'var(--radius)' }}>
+                    <div style={{ height: 4, background: 'linear-gradient(90deg, var(--c-amber), #fbbf24)' }} />
+                    <div style={{ padding: '28px 24px' }}>
+                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                            <div style={{
+                                width: 60, height: 60, borderRadius: 16,
+                                background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 16px', color: 'var(--c-amber)',
+                            }}>
+                                <span style={{ width: 28, height: 28, display: 'flex' }}><Icons.Settings /></span>
+                            </div>
+                            <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>Repair Cryptographic Record?</h3>
+                            <p style={{ fontSize: 14, color: 'var(--c-text-muted)', marginTop: 10 }}>
+                                We detected a hash mismatch for certificate <strong className="mono">{selected?.public_id}</strong>.
+                                Enrichment Data (Edit if missing):
+                            </p>
+
+                            <div style={{ marginTop: 20, textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label style={{ fontSize: 11, color: 'var(--c-text-faint)', marginBottom: 4, display: 'block' }}>STUDENT NAME</label>
+                                    <input
+                                        className="form-input"
+                                        style={{ height: 40, fontSize: 14 }}
+                                        value={repairForm.name}
+                                        onChange={e => setRepairForm({ ...repairForm, name: e.target.value })}
+                                    />
+                                </div>
+                                <div style={{ gridColumn: 'span 1' }}>
+                                    <label style={{ fontSize: 11, color: 'var(--c-text-faint)', marginBottom: 4, display: 'block' }}>ROLL NUMBER</label>
+                                    <input
+                                        className="form-input mono"
+                                        style={{ height: 40, fontSize: 14 }}
+                                        value={repairForm.roll}
+                                        onChange={e => setRepairForm({ ...repairForm, roll: e.target.value })}
+                                    />
+                                </div>
+                                <div style={{ gridColumn: 'span 1' }}>
+                                    <label style={{ fontSize: 11, color: 'var(--c-text-faint)', marginBottom: 4, display: 'block' }}>DEPARTMENT</label>
+                                    <select
+                                        className="form-input"
+                                        style={{ height: 40, fontSize: 14 }}
+                                        value={repairForm.department}
+                                        onChange={e => setRepairForm({ ...repairForm, department: e.target.value })}
+                                    >
+                                        <option value="">Select Dept</option>
+                                        {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                </div>
+                                <div style={{ gridColumn: 'span 1' }}>
+                                    <label style={{ fontSize: 11, color: 'var(--c-text-faint)', marginBottom: 4, display: 'block' }}>DEGREE</label>
+                                    <input
+                                        className="form-input"
+                                        style={{ height: 40, fontSize: 14 }}
+                                        placeholder="e.g. B.Tech"
+                                        value={repairForm.degree}
+                                        onChange={e => setRepairForm({ ...repairForm, degree: e.target.value })}
+                                    />
+                                </div>
+                                <div style={{ gridColumn: 'span 1' }}>
+                                    <label style={{ fontSize: 11, color: 'var(--c-text-faint)', marginBottom: 4, display: 'block' }}>CGPA / YEAR</label>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <input
+                                            className="form-input"
+                                            style={{ height: 40, fontSize: 14, flex: 1 }}
+                                            placeholder="CGPA"
+                                            value={repairForm.cgpa}
+                                            onChange={e => setRepairForm({ ...repairForm, cgpa: e.target.value })}
+                                        />
+                                        <input
+                                            className="form-input"
+                                            style={{ height: 40, fontSize: 14, flex: 1 }}
+                                            placeholder="Year"
+                                            value={repairForm.year}
+                                            onChange={e => setRepairForm({ ...repairForm, year: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: 24, padding: 12, background: 'rgba(124,58,237,0.05)', borderRadius: 12, border: '1px solid rgba(124,58,237,0.1)', textAlign: 'left' }}>
+                                <label style={{ display: 'flex', cursor: 'pointer', gap: 12, alignItems: 'flex-start' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={createNewId}
+                                        onChange={e => setCreateNewId(e.target.checked)}
+                                        style={{ marginTop: 4, width: 18, height: 18, accentColor: 'var(--c-accent)' }}
+                                    />
+                                    <div>
+                                        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>Secure Bridge / New Public ID</div>
+                                        <div style={{ fontSize: 11, color: 'var(--c-text-muted)', marginTop: 2 }}>
+                                            Generate a brand new ID for this student. The old ID will automatically forward to the new one. Use this if the old ID was publicly compromised.
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <button className="btn btn-secondary btn-full" onClick={() => setRepairOpen(false)} disabled={repairing}>Cancel</button>
+                            <button className="btn btn-primary btn-full" onClick={executeRepair} disabled={repairing} style={{ gap: 6, background: 'var(--c-amber)', border: 'none', color: '#fff' }}>
+                                {repairing ? <><div className="spinner" />Repairing…</> : 'Authorize Repair'}
                             </button>
                         </div>
                     </div>

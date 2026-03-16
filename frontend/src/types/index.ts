@@ -17,18 +17,22 @@ export interface AdminUser {
 }
 
 export interface DecryptedMetadata {
-    studentName: string;
-    rollNumber: string;
+    name: string;
+    roll: string;
     degree: string;
     department: string;
-    graduationYear: number;
+    year: number;
     cgpa: number;
 }
 
 export interface Certificate {
     public_id: string;
-    student_name?: string;
-    roll_number?: string;
+    student_name: string;
+    roll_number: string;
+    department: string;
+    degree: string;
+    cgpa: number;
+    year: number;
     status: CertificateStatus;
     issued_at: string;
     issued_by: string; // Admin reference ID
@@ -71,6 +75,7 @@ export interface CertificateIssuePayload {
     department: string;
     year: number;
     cgpa: number;
+    createNewId?: boolean;
 }
 
 export interface CertificateIssueResponse extends ApiResponse {
@@ -82,4 +87,7 @@ export interface CertificateIssueResponse extends ApiResponse {
 export interface CertificateVerificationResponse extends ApiResponse {
     data: DecryptedMetadata;
     verified_at: string;
+    qr_code?: string;
+    public_id?: string;
+    forwarded_from?: string;
 }

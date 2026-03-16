@@ -13,7 +13,7 @@ import ReviewDrafts from './pages/admin/ReviewDrafts';
 import Verify from './pages/public/Verify';
 
 function App() {
-    const { isAuthenticated } = useAuth();
+    const { user } = useAuth(); // or remove entirely if unused, but let's check. Wait, neither is used in App.tsx. Let's just remove the hook call.
 
     return (
         <>
@@ -34,12 +34,11 @@ function App() {
             />
             <Routes>
                 {/* Root: redirect to dashboard if auth'd, else login */}
-                <Route path="/" element={<Navigate to={isAuthenticated ? '/admin/dashboard' : '/login'} replace />} />
-
-                {/* Public routes */}
-                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Verify />} />
+                <Route path="/login" element={<Verify />} />
+                <Route path="/admin-access" element={<Login />} />
                 <Route path="/verify/:id" element={<Verify />} />
-                <Route path="/verify" element={<Verify />} />
+                <Route path="/verify" element={<Navigate to="/" replace />} />
 
                 {/* Protected admin zone */}
                 <Route path="/admin" element={<ProtectedRoute />}>

@@ -103,7 +103,6 @@ export default function HodDashboard() {
                         <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <QuickActionBtn label="Verify Details" icon={<Icons.Check />} to="/admin/drafts" primary />
                             <QuickActionBtn label="All Certificates" icon={<Icons.List />} to="/admin/certificates" />
-                            <QuickActionBtn label="Verify a Certificate" icon={<Icons.Verify />} href="/verify" />
                         </div>
                     </SectionCard>
                 </div>

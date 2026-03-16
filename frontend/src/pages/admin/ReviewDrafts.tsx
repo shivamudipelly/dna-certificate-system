@@ -392,11 +392,10 @@ export default function ReviewDrafts() {
                         <PremiumCertificateCard
                             data={issuedCert.data}
                             publicId={issuedCert.publicId}
-                            verificationUrl={`${window.location.origin}/verify/${issuedCert.publicId}`}
-                            qrCodeDataUrl={issuedCert.qrCodeDataUrl}
+                            minimal={true}
                         />
-                        <button className="btn btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={() => setIssuedCert(null)}>
-                            Close
+                        <button className="btn btn-primary" style={{ marginTop: 24, width: '100%', padding: '12px' }} onClick={() => setIssuedCert(null)}>
+                            Done & Close
                         </button>
                     </div>
                 </div>

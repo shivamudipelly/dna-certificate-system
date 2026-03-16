@@ -9,8 +9,9 @@ import toast from 'react-hot-toast';
 type ErrState = 'NONE' | 'NOT_FOUND' | 'REVOKED' | 'TAMPERED' | 'SERVER_ERROR';
 
 import PremiumCertificateCard from '../../components/certificate/PremiumCertificateCard';
+import ScanningAnimation from '../../components/ScanningAnimation';
 
-/* ─── Error Cards (unchanged but cleaner) ───────────────── */
+/* ─── Error Cards ───────────────── */
 function ErrorCard({ type, id, onRetry }: { type: ErrState; id?: string; onRetry?: () => void }) {
     const configs = {
         TAMPERED: {
@@ -61,12 +62,6 @@ function ErrorCard({ type, id, onRetry }: { type: ErrState; id?: string; onRetry
                     {onRetry && (
                         <button onClick={onRetry} className="btn btn-secondary btn-sm">Try Again</button>
                     )}
-                    {type === 'TAMPERED' && (
-                        <>
-                            <button onClick={() => alert('Fraud reported to DNA Authority')} className="btn btn-secondary btn-sm" style={{ color: 'var(--c-red)' }}>Report fraud</button>
-                            <button onClick={() => window.open('mailto:contact@university.edu')} className="btn btn-secondary btn-sm">Contact university</button>
-                        </>
-                    )}
                 </div>
             </div>
         </div>
@@ -83,15 +78,31 @@ export default function Verify() {
     const [error, setError] = useState<ErrState>('NONE');
     const [data, setData] = useState<any>(null);
 
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Detect if we are in pure document view mode
+    const isDocumentView = window.location.pathname.startsWith('/verify/');
+
     useEffect(() => { document.title = 'Certificate Verification · University Verification System'; }, []);
 
     useEffect(() => {
-        if (id) fetchVerify(id);
-        else { setData(null); setError('NONE'); }
+        if (id) {
+            setSearch(id);
+            fetchVerify(id);
+        } else {
+            setData(null);
+            setError('NONE');
+
+        }
     }, [id]);
 
     const fetchVerify = async (publicId: string, silent = false) => {
-        if (!silent) { setIsLoading(true); setError('NONE'); setData(null); }
+        if (!silent) {
+            setIsLoading(true);
+            setIsSearching(true);
+            setError('NONE');
+
+        }
         try {
             const res = await certificateAPI.verify(publicId) as any;
             if (res?.success) {
@@ -105,7 +116,12 @@ export default function Verify() {
             else if (msg.includes('not found') || msg.includes('invalid')) setError('NOT_FOUND');
             else setError('SERVER_ERROR');
         } finally {
-            if (!silent) setTimeout(() => setIsLoading(false), 600);
+            if (!silent) {
+                setTimeout(() => {
+                    setIsLoading(false);
+                    setTimeout(() => setIsSearching(false), 800);
+                }, 1500);
+            }
         }
     };
 
@@ -121,128 +137,194 @@ export default function Verify() {
             <div className="dna-bg" />
             <div className="grid-overlay" />
 
-            {/* ── Header ── */}
-            <header style={{
-                borderBottom: '1px solid rgba(124,58,237,0.12)',
-                background: 'rgba(6,8,17,0.88)', backdropFilter: 'blur(16px)',
-                padding: '0 32px', height: 62,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                position: 'sticky', top: 0, zIndex: 50,
-            }} className="no-print">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(124,58,237,0.4)' }}>
-                        <DnaLogo size={22} />
+            {/* ── Header ── Hidden in pure document view */}
+            {!isDocumentView && (
+                <header style={{
+                    borderBottom: '1px solid rgba(124,58,237,0.12)',
+                    background: 'rgba(6,8,17,0.88)', backdropFilter: 'blur(16px)',
+                    padding: '0 32px', height: 62,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    position: 'sticky', top: 0, zIndex: 50,
+                }} className="no-print">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(124,58,237,0.4)' }}>
+                            <DnaLogo size={22} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.2 }}>DNA Certificate Verification</div>
+                            <div style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>Public Portal · No login required</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.2 }}>DNA Certificate Verification</div>
-                        <div style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>Public Portal · No login required</div>
-                    </div>
-                </div>
-                {isAuthenticated ? (
-                    <a href="/admin/dashboard" style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-green-bright)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--c-green-bright)', boxShadow: '0 0 8px var(--c-green)' }} />
-                        Admin Panel
-                    </a>
-                ) : (
-                    <a href="/login" style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-accent-bright)', textDecoration: 'none' }}>Admin Login →</a>
-                )}
-            </header>
+                    {isAuthenticated ? (
+                        <a href="/admin/dashboard" style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-green-bright)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--c-green-bright)', boxShadow: '0 0 8px var(--c-green)' }} />
+                            Admin Panel
+                        </a>
+                    ) : (
+                        <a href="/admin-access" style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-accent-bright)', textDecoration: 'none' }}>Admin Login →</a>
+                    )}
+                </header>
+            )}
 
             {/* ── Main ── */}
-            <main style={{ maxWidth: data ? 860 : 720, margin: '0 auto', padding: '48px 24px 80px', position: 'relative', zIndex: 1, transition: 'max-width 0.4s ease' }} className="no-print-padding">
+            <main style={{
+                maxWidth: 1000,
+                margin: '0 auto',
+                padding: isDocumentView ? '40px 24px' : '100px 24px 80px',
+                position: 'relative',
+                zIndex: 1
+            }}>
 
-                {/* Hero — only when no ID in URL */}
-                {!id && (
-                    <div className="verify-hero no-print">
-                        <div className="verify-hero-icon">
-                            <span style={{ width: 40, height: 40, color: 'var(--c-accent-bright)', display: 'flex' }}><Icons.Shield /></span>
-                        </div>
-                        <h1>Cryptographic Integrity Search</h1>
-                        <p>Enter the certificate ID to verify its authenticity using DNA cryptographic verification.</p>
-                        <div className="how-it-works">
-                            {[
-                                { n: '1', label: 'Enter Certificate ID or scan QR code' },
-                                { n: '2', label: 'DNA sequence is decrypted & validated' },
-                                { n: '3', label: 'Official certificate document is generated' },
-                            ].map((step, i) => (
-                                <div key={step.n} className="how-step">
-                                    <div className="how-step-num">{step.n}</div>
-                                    <div className="how-step-label">{step.label}</div>
-                                    {i < 2 && <div className="how-step-connector" />}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Search box */}
-                <form onSubmit={handleSubmit} className="anim-fade-up no-print" style={{ marginBottom: 40 }}>
-                    <div style={{
-                        display: 'flex', gap: 10,
-                        background: 'rgba(13,17,23,0.8)',
-                        backdropFilter: 'blur(16px)',
-                        border: '1px solid rgba(124,58,237,0.2)',
-                        borderRadius: 'var(--radius)',
-                        padding: '8px 8px 8px 16px',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                    }}>
-                        <span style={{ display: 'flex', alignItems: 'center', color: 'var(--c-text-faint)', width: 18, height: 18, alignSelf: 'center' }}>
-                            <Icons.Search />
-                        </span>
-                        <input
-                            type="text"
-                            className="mono"
-                            placeholder="Enter Public ID"
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            disabled={isLoading}
-                            style={{
-                                flex: 1, fontSize: 14, letterSpacing: '0.04em',
-                                background: 'none', border: 'none', outline: 'none',
-                                color: 'var(--c-text)', fontFamily: 'JetBrains Mono, monospace',
-                            }}
-                        />
-                        <button type="submit" className="btn btn-primary" disabled={isLoading} style={{ whiteSpace: 'nowrap', gap: 6 }}>
-                            {isLoading ? <><div className="spinner" />Verifying…</> : (
-                                <><span style={{ width: 16, height: 16, display: 'flex' }}><Icons.Search /></span> Verify</>
+                {/* Search Bar - Hidden in pure document view */}
+                {!isDocumentView && (
+                    <div className="anim-fade-up" style={{ marginBottom: data ? 32 : 40, textAlign: 'center' }}>
+                        <div style={{ marginBottom: data ? 16 : 32 }}>
+                            <h1 style={{ fontSize: data ? 24 : 42, fontWeight: 900, color: 'var(--c-text)', marginBottom: 8 }}>
+                                {data ? 'Verify Another Record' : 'Verify Authenticity'}
+                            </h1>
+                            {!data && (
+                                <p style={{ fontSize: 17, color: 'var(--c-text-muted)', maxWidth: 500, margin: '0 auto' }}>
+                                    Enter the unique DNA Certificate ID to validate and view student academic records instantly.
+                                </p>
                             )}
-                        </button>
-                    </div>
-                </form>
-
-                {/* Loading */}
-                {isLoading && (
-                    <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                        <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 24px' }}>
-                            <div style={{ position: 'absolute', inset: 0, border: '3px solid rgba(99,102,241,0.15)', borderTopColor: 'var(--c-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                            <div style={{ position: 'absolute', inset: 8, border: '2px solid rgba(139,92,246,0.1)', borderBottomColor: '#8b5cf6', borderRadius: '50%', animation: 'spin 1.2s linear infinite reverse' }} />
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-accent-bright)' }}>
-                                <span style={{ width: 22, height: 22, display: 'flex' }}><Icons.DNA /></span>
-                            </div>
                         </div>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-text)' }}>Deconstructing Cryptographic Blocks...</div>
-                        <div style={{ fontSize: 13, color: 'var(--c-text-muted)', marginTop: 6 }}>Verifying cryptographic integrity</div>
+
+                        <form onSubmit={handleSubmit} className="glass" style={{
+                            maxWidth: 600, margin: '0 auto', padding: 8, display: 'flex', gap: 8,
+                            borderRadius: 16, border: '1px solid rgba(124,58,237,0.2)',
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+                        }}>
+                            <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <span style={{ position: 'absolute', left: 16, color: 'var(--c-text-faint)', width: 20, height: 20 }}>
+                                    <Icons.Search />
+                                </span>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Enter Public ID (e.g. DNA-XXXX...)"
+                                    style={{ border: 'none', background: 'transparent', paddingLeft: 48, fontSize: 16, height: 54 }}
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                />
+                            </div>
+                            <button type="submit" className="btn btn-primary" style={{ padding: '0 28px', borderRadius: 12, fontSize: 15, fontWeight: 700 }}>
+                                {isLoading ? 'Verifying...' : 'Search Record'}
+                            </button>
+                        </form>
                     </div>
                 )}
 
-                {/* ── Certificate Document ── */}
-                {!isLoading && error === 'NONE' && data && id && (
-                    <PremiumCertificateCard
-                        data={data.data}
-                        publicId={id}
-                        verificationUrl={`${window.location.origin}/verify/${id}`}
-                        qrCodeDataUrl={data.qr_code}
-                    />
-                )}
+                {/* Results Section */}
+                <div style={{ position: 'relative' }}>
+                    {isSearching ? (
+                        <ScanningAnimation />
+                    ) : (
+                        <div className="anim-fade-up">
+                            {error !== 'NONE' && (
+                                <div style={isDocumentView ? { paddingTop: 100 } : {}}>
+                                    <ErrorCard type={error} id={id} onRetry={() => id && fetchVerify(id)} />
+                                    {isDocumentView && (
+                                        <div style={{ textAlign: 'center', marginTop: 32 }}>
+                                            <button onClick={() => navigate('/')} className="btn btn-secondary">← Return to Search Dashboard</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-                {/* Error states */}
-                {!isLoading && error !== 'NONE' && (
-                    <ErrorCard
-                        type={error}
-                        id={id}
-                        onRetry={error === 'SERVER_ERROR' ? () => id && fetchVerify(id) : undefined}
-                    />
-                )}
+                            {data && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                                    {/* Status Header - Hidden in pure document view */}
+                                    {!isDocumentView && (
+                                        <div className="glass-sm" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 16, borderLeft: '4px solid var(--c-green-bright)' }}>
+                                            <div style={{ color: 'var(--c-green-bright)', width: 24, height: 24 }}><Icons.Check /></div>
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--c-text)' }}>Authentic Record Found</div>
+                                                <div style={{ fontSize: 12, color: 'var(--c-text-muted)' }}>Verified against University DNA Registry</div>
+                                            </div>
+                                            <button
+                                                onClick={() => navigate(`/verify/${id}`)}
+                                                className="btn btn-primary btn-sm"
+                                                style={{ marginLeft: 'auto' }}
+                                            >
+                                                View Official Document →
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Result Display */}
+                                    <div className="anim-scale">
+                                        {data.forwarded_from && (
+                                            <div className="glass-sm" style={{
+                                                padding: '12px 16px',
+                                                marginBottom: 20,
+                                                borderRadius: 12,
+                                                border: '1px solid rgba(16,185,129,0.2)',
+                                                background: 'rgba(16,185,129,0.05)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 12,
+                                                color: 'var(--c-green)',
+                                                animation: 'slide-up 0.5s ease'
+                                            }}>
+                                                <span style={{ width: 20, height: 20, display: 'flex' }}><Icons.Shield /></span>
+                                                <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                                                    <strong>Secured Redirect:</strong> This record was digitally restored and transitioned from legacy ID <code className="mono" style={{ background: 'rgba(0,0,0,0.1)', padding: '2px 4px', borderRadius: 4 }}>{data.forwarded_from}</code> to maintain institutional integrity.
+                                                </div>
+                                            </div>
+                                        )}
+                                        <PremiumCertificateCard
+                                            data={{
+                                                name: data.data.name,
+                                                roll: data.data.roll,
+                                                degree: data.data.degree,
+                                                department: data.data.department,
+                                                year: data.data.year,
+                                                cgpa: data.data.cgpa
+                                            }}
+                                            publicId={data.public_id || id || ''}
+                                            minimal={!isDocumentView}
+                                            forceFormal={isDocumentView}
+                                        />
+                                    </div>
+
+                                    {/* Action Buttons - Only in Document View */}
+                                    {isDocumentView && (
+                                        <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 16 }} className="no-print">
+                                            <button onClick={() => window.print()} className="btn btn-primary" style={{ gap: 8 }}>
+                                                <span style={{ width: 18, height: 18, display: 'flex' }}><Icons.Print /></span>
+                                                Print / Download
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(window.location.href);
+                                                    toast.success('Verification link copied!');
+                                                }}
+                                                className="btn btn-secondary"
+                                                style={{ gap: 8 }}
+                                            >
+                                                <span style={{ width: 18, height: 18, display: 'flex' }}><Icons.Copy /></span>
+                                                Share Link
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Verification Footer - Only in Dashboard View */}
+                                    {!isDocumentView && (
+                                        <div style={{ marginTop: 20, textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => { setData(null); setSearch(''); navigate('/'); }}
+                                                className="btn btn-secondary btn-sm"
+                                                style={{ opacity: 0.7 }}
+                                            >
+                                                ← Verify Another Record
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </main>
         </div>
     );

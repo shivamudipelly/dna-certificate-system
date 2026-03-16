@@ -5,7 +5,8 @@ import {
     issueCertificate,
     verifyCertificate,
     getAdminCertificates,
-    revokeCertificate
+    revokeCertificate,
+    reissueCertificate
 } from '../controllers/certificateController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -44,6 +45,9 @@ router.get('/', protect, getAdminCertificates);
 
 // PUT /api/certificates/:public_id/revoke - SuperAdmin ONLY override module
 router.put('/:public_id/revoke', protect, authorize('SuperAdmin'), revokeCertificate);
+
+// PUT /api/certificates/:public_id/reissue - Restore tampered/fix records
+router.put('/:public_id/reissue', protect, authorize('HOD', 'SuperAdmin'), reissueCertificate);
 
 /**
  * 🔓 PUBLIC ROUTES

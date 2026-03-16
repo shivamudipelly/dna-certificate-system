@@ -5,7 +5,7 @@ import { certificateAPI, draftAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { Icons } from '../../components/Icons';
 import { StatCard, QuickActionBtn, SectionCard, EmptyState, StatusBadge } from '../../components/admin/DashboardWidget';
-import { CertificateListResponse, Certificate } from '../../types';
+import type { CertificateListResponse, Certificate } from '../../types';
 
 export default function AdminDashboard() {
     const { user } = useAuth();
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
     const active = certs.filter(c => c.status === 'active').length;
     const revoked = certs.filter(c => c.status === 'revoked').length;
-    const verifications = certs.reduce((a, c) => a + (c.verification_count ?? 0), 0);
+
 
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner spinner-lg" /></div>;
 
@@ -93,7 +93,6 @@ export default function AdminDashboard() {
                             <QuickActionBtn label="Review Drafts" icon={<Icons.Check />} to="/admin/drafts" primary />
                             <QuickActionBtn label="All Certificates" icon={<Icons.List />} to="/admin/certificates" />
                             <QuickActionBtn label="Manage Users" icon={<Icons.User />} to="/admin/users" />
-                            <QuickActionBtn label="Verify Portal" icon={<Icons.ExternalLink />} href="/verify" />
                         </div>
                     </SectionCard>
 

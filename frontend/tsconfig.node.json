@@ -7,7 +7,6 @@
     "strict": true
   },
   "include": [
-    "vite.config.js",
-    "vite.config.d.ts"
+    "vite.config.ts"
   ]
 }

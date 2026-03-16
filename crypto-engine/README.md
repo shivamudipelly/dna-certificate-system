@@ -1,149 +1,102 @@
-# DNA Crypto Engine
+# 🧬 University Crypto Engine - DNA Cryptography Microservice
 
-A high-security cryptographic microservice for encrypting sensitive data payloads into synthetic DNA sequences. Built with Python and FastAPI, this engine combines AES-256 encryption with Logistic Map Chaotic Sequences and Watson-Crick DNA encoding rules to provide a quantum-resistant layer of data protection and tamper verification.
-
----
-
-## ⚡ Key Features
-
-*   **Symmetric AES-256-CBC Encryption:** Industry-standard encryption with secure, randomized Initialization Vectors (IV).
-*   **Chaotic Logistic Maps:** Generates a deterministic, highly-sensitive pseudo-random sequence ($x_{n+1} = r \times x_n \times (1 - x_n)$) seeded by the payload's SHA-256 hash.
-*   **Dynamic DNA Encoding:** Translates binary ciphertexts into biological nucleotides (A, C, T, G) using 4 distinct substitution dictionaries dynamically selected by the chaotic sequence.
-*   **Watson-Crick Mutation:** Applies a final bitwise-equivalent XOR substitution layer using a static DNA master key.
-*   **Zero-Knowledge Tamper Detection:** Strict SHA-256 verification during decryption instantly rejects altered sequences with a `403 TAMPERED` error without leaking internal states.
+A high-performance Python microservice dedicated to encrypting sensitive academic data into synthetic DNA sequences. Built with FastAPI and Python 3.11, the UC-Engine combines industry-standard AES-256-CBC encryption with deterministic **Chaotic Logistic Map sequences** and **Watson-Crick DNA encoding** rules.
 
 ---
 
-## 🔒 Encryption Pipeline
-When the `/encrypt` endpoint receives a JSON payload, the engine executes the following deterministic 9-step pipeline:
+## ⚡ Core Security Features (Pinch by Inch)
 
-1.  **Generate Hash:** Computes the SHA-256 fingerprint of the sorted JSON data.
-2.  **Envelope Data:** Bundles the original data and the SHA-256 hash into a single payload object.
-3.  **AES-256 Encrypt:** Encrypts the envelope using AES-CBC and outputs a Base64 string.
-4.  **Binary Translation:** Converts the Base64 ciphertext into a continuous binary stream (1s and 0s).
-5.  **Seed Generation:** Derives a normalized floating-point Chaotic Seed ($x_0$) from the first 8 characters of the SHA-256 hash.
-6.  **Chaos Generation:** Computes a logistic map sequence matching half the length of the binary stream.
-7.  **DNA Encoding:** Iterates through the binary stream (2 bits at a time), selecting 1 of 4 translation rules based on the corresponding chaotic sequence value, resulting in a nucleotide string.
-8.  **XOR Mutation:** Mutates the sequence against the environment `DNA_SECRET_KEY` using Watson-Crick pairing rules.
-9.  **Output:** Returns the final mutated `dna_payload` and the `chaotic_seed` required for future decryption.
-
-*(Decryption runs this pipeline in exact reverse, strictly validating the internal hash block against the decrypted JSON data.)*
+- 🔒 **Symmetric AES-256-CBC** — Industry-standard encryption with randomized Initialization Vectors (IV).
+- 🧬 **Chaotic Logistic Maps** — Generates a highly-sensitive pseudo-random sequence ($x_{n+1} = r \times x_n \times (1 - x_n)$) seeded by the payload's unique SHA-256 hash.
+- 🔠 **Dynamic DNA Translation** — Converts binary ciphertexts into biological nucleotides (A, C, T, G) using 4 distinct substitution dictionaries selected dynamically by the chaotic sequence.
+- 🧬 **Watson-Crick Mutation** — Applies a final bitwise-equivalent XOR layer against a static 256-character DNA master key for extra-depth security.
+- 🛡️ **Zero-Knowledge Tamper Protection** — Self-verifying SHA-256 checks during decryption. If even a single bit of the DNA sequence is altered, the engine will fail with a `403 TAMPERED` error.
 
 ---
 
-## 🛠️ Installation & Setup
+## 🏗️ Technical Pipeline
+
+When the `/encrypt` endpoint is triggered, the engine executes a deterministic 9-step cryptographic workflow:
+
+1.  **Normalization** — The incoming JSON payload is sorted and formatted.
+2.  **SHA-256 Fingerprinting** — Computes the cryptographic hash of the data.
+3.  **Data Enveloping** — Bundles the raw data + SHA-256 hash into a single binary block.
+4.  **AES-256-CBC Layer** — Encrypts the envelope with the system's `AES_KEY`.
+5.  **Binary Serialization** — Translates the ciphertext into a raw bitstream.
+6.  **Chaotic Seed Derivation** — Normalizes the first 8 characters of the SHA-256 hash into a floating-point seed ($x_0$).
+7.  **Dynamic Substitution** — Iterates through bit-pairs, mapping them to (A, T, C, G) using the logistic map's current state.
+8.  **XOR Mutation** — Applies the `DNA_SECRET_KEY` mutation layer.
+9.  **Output Generation** — Returns the final `dna_payload` string and its corresponding `chaotic_seed`.
+
+*(The decryption process runs this pipeline in exact reverse to reconstruct the original validated record.)*
+
+---
+
+## 🛠️ Stack & Runtime
+
+- **Runtime:** Python 3.10 / 3.11 / 3.12+
+- **Framework:** FastAPI (High performance, Asynchronous)
+- **Deployment Server:** Uvicorn (ASGI)
+- **Encryption Engine:** `cryptography` (Fernet-compatible AES-256)
+- **Data Validation:** Pydantic v2 (Strict type schemas)
+- **Security:** `python-jose` (JSON Web Token utilities)
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-*   Python 3.10+
-*   pip
+- Python 3.10+
+- pip (Python Package Installer)
 
-### Setup Instructions
-
-1.  **Clone the Repository and Navigate to the Engine:**
+### Installation
+1.  **Navigate and Install:**
     ```bash
     cd crypto-engine
-    ```
-
-2.  **Create and Activate a Virtual Environment:**
-    ```bash
-    # Windows
-    python -m venv venv
-    .\venv\Scripts\activate
-
-    # macOS / Linux
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-
-3.  **Install Dependencies:**
-    ```bash
     pip install -r requirements.txt
     ```
-
-4.  **Configure Environment Variables:**
-    Create a `.env` file in the `crypto-engine` directory:
+2.  **Configure Environment:**
+    Create a `.env` file based on `.env.example`:
     ```env
     PORT=8000
-    AES_KEY="<base64_encoded_32_byte_key>"
-    DNA_SECRET_KEY="<256_character_ATCG_string>"
+    AES_KEY="your-32-byte-base64-key"
+    DNA_SECRET_KEY="256-character-ATCG-string"
     LOGISTIC_MAP_R="3.99"
+    ENGINE_API_KEY="shared-gateway-secret"
     ```
 
-5.  **Start the Server:**
-    ```bash
-    uvicorn app.main:app --reload
-    ```
-    The service will start on `http://localhost:8000`.
+### Running the Engine
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+The service will be available internally at `http://localhost:8000`.
 
 ---
 
-## 📡 API Reference
+## 📡 API Specification
 
-All endpoints are protected and require the `x-api-key` header matching the internal API Gateway Secret Token. You can explore and test the API interactively using the built-in Swagger UI at `http://localhost:8000/docs`.
+> ⚠️ **Note:** This service is **internal-only**. It must not be exposed to the public internet. It validates all requests via the `x-api-key` header matching the API Gateway's shared secret.
 
-### Authentication
-*   **Header:** `x-api-key`
-*   **Value:** `gateway-secret-token` *(default local dev value)*
+### Endpoints
+| Path | Method | Headers | Description |
+|---|---|---|---|
+| `/encrypt` | `POST` | `x-api-key` | Encodes JSON into a DNA string. |
+| `/decrypt` | `POST` | `x-api-key` | Decodes DNA into JSON (or returns 403). |
+| `/health` | `GET` | None | Returns service status. |
 
-### `POST /encrypt`
-Encrypts a standard JSON dictionary into a DNA sequence.
+---
 
-**Request Body:**
-```json
-{
-  "data": {
-    "certificate_id": "CERT-2026-X",
-    "student_name": "Jane Doe"
-  }
-}
+## 🧪 Testing & Reliability
+
+Comprehensive unit tests cover all cryptographic modules.
+```bash
+pytest          # Run core tests
+pytest -v       # Run with verbose output
 ```
 
-**Success Response (200 OK):**
-```json
-{
-  "success": true,
-  "dna_payload": "ATCGGCTAGCTAGCTA...",
-  "chaotic_seed": "0.1128615055030355"
-}
-```
-
-### `POST /decrypt`
-Reverses a DNA payload back into the original JSON dictionary. Fails if the sequence was tampered with.
-
-**Request Body:**
-```json
-{
-  "dna_payload": "ATCGGCTAGCTAGCTA...",
-  "chaotic_seed": "0.1128615055030355"
-}
-```
-
-**Success Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "certificate_id": "CERT-2026-X",
-    "student_name": "Jane Doe"
-  }
-}
-```
-
-**Tampered Response (403 Forbidden):**
-```json
-{
-  "success": false,
-  "error": "TAMPERED"
-}
-```
-
-### `GET /health`
-Validates the microservice is operational.
-
-**Success Response (200 OK):**
-```json
-{
-  "status": "ok",
-  "service": "Crypto Engine"
-}
-```
+### Coverage Areas
+- **`test_aes_service`** — Verifies encryption and decryption for various sizes.
+- **`test_chaos_service`** — Ensures deterministic logistic sequence generation.
+- **`test_dna_encoder`** — Validates nucleotide substitution accuracy.
+- **`test_hash_service`** — Verifies SHA-256 integrity checks.
+- **`test_endpoints`** — Integration tests for FastAPI routes.

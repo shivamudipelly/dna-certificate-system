@@ -1,8 +1,8 @@
-# System Architecture
+# University Certificate Verification System - Architecture Documentation
 
 ## Overview
 
-The DNA Certificate System is a **three-tier microservices architecture** designed around the principle of cryptographic separation of concerns. No single service holds all the information needed to compromise a certificate — the encryption keys live only in the Crypto Engine, while MongoDB holds only the encrypted DNA payload.
+The University Certificate Verification System is a **three-tier microservices architecture** designed around the principle of cryptographic separation of concerns. No single service holds all the information needed to compromise a certificate — the encryption keys live only in the Crypto Engine, while MongoDB holds only the encrypted DNA payload.
 
 ---
 

@@ -1,4 +1,4 @@
-# API Specification
+# University Certificate Verification System - API Specification
 
 All API Gateway endpoints are prefixed with `/api`. The Crypto Engine is internal-only and not directly callable from outside the Docker/Render network.
 
@@ -185,6 +185,7 @@ Content-Type: application/json
   "name": "Anjali Sharma",
   "roll": "CS2021001",
   "degree": "B.Tech Computer Science",
+  "department": "Computer Science",
   "cgpa": "8.75",
   "year": "2024"
 }

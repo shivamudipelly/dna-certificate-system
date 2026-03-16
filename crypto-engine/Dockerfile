@@ -1,5 +1,5 @@
 # ============================================================
-# DNA Certificate System — Crypto Engine
+# University Certificate Verification System — Crypto Engine
 # Base: python:3.11-slim  |  Exposes: 8000
 # ============================================================
 

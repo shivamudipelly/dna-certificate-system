@@ -78,6 +78,9 @@ coverage.xml
 nosetests.xml
 test-results/
 junit.xml
+jest-results.json
+results.json
+test_output.txt
 
 # ── Logs ───────────────────────────────────────────────────────
 logs/

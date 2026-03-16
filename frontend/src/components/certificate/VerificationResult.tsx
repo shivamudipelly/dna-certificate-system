@@ -1,9 +1,9 @@
-import React from 'react';
+
 import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { PrinterIcon, ArrowDownTrayIcon, ShieldExclamationIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import CertificateTemplate from './CertificateTemplate';
-import { DecryptedMetadata } from '../../types';
+import type { DecryptedMetadata } from '../../types';
 
 interface VerificationResultProps {
     publicId: string;

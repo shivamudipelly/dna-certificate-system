@@ -88,7 +88,6 @@ export default function ClerkDashboard() {
                         <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <QuickActionBtn label="Add New Details" icon={<Icons.Issue />} to="/admin/issue" primary />
                             <QuickActionBtn label="My Drafts" icon={<Icons.List />} to="/admin/drafts" />
-                            <QuickActionBtn label="Verify a Certificate" icon={<Icons.Verify />} href="/verify" />
                         </div>
                     </SectionCard>
                     {reverted > 0 && (

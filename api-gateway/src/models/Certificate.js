@@ -15,7 +15,25 @@ const CertificateSchema = new mongoose.Schema({
     },
     roll_number: {
         type: String,
-        required: [true, 'Roll Number is required for registry tracking']
+        required: [true, 'Roll Number is required for registry tracking'],
+        index: true
+    },
+    department: {
+        type: String,
+        required: [true, 'Department is required'],
+        enum: ['CSE', 'ECE', 'EEE', 'ME', 'CE', 'IT', 'AI&ML', 'DS']
+    },
+    degree: {
+        type: String,
+        required: [true, 'Degree is required']
+    },
+    cgpa: {
+        type: Number,
+        required: [true, 'CGPA is required']
+    },
+    year: {
+        type: Number,
+        required: [true, 'Graduation Year is required']
     },
     dna_payload: {
         type: String,
@@ -54,6 +72,11 @@ const CertificateSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'revoked'],
         default: 'active'
+    },
+    replaced_by: {
+        type: String, // Public ID of the successor certificate
+        default: null,
+        index: true
     }
 }, {
     timestamps: true

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+
 import { useAuth } from '../../context/AuthContext';
-import { ClipboardDocumentIcon, EyeIcon, NoSymbolIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentIcon, EyeIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { Certificate } from '../../types';
+import type { Certificate } from '../../types';
 
 interface CertificateTableProps {
     certificates: Certificate[];
@@ -16,13 +16,6 @@ export default function CertificateTable({ certificates, onView, onRevoke }: Cer
     const handleCopyId = (id: string) => {
         navigator.clipboard.writeText(id);
         toast.success('Public ID copied to clipboard');
-    };
-
-    const handleCopyLink = (id: string) => {
-        // We assume the frontend URL structure for verification here
-        const url = `${window.location.origin}/verify/${id}`;
-        navigator.clipboard.writeText(url);
-        toast.success('Verification Link copied to clipboard');
     };
 
     if (!certificates || certificates.length === 0) {
@@ -93,17 +86,9 @@ export default function CertificateTable({ certificates, onView, onRevoke }: Cer
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex justify-end space-x-3">
                                         <button
-                                            onClick={() => handleCopyLink(cert.public_id)}
-                                            className="text-gray-400 hover:text-primary-600 transition-colors"
-                                            title="Copy Verification Link"
-                                        >
-                                            <LinkIcon className="h-5 w-5" />
-                                        </button>
-
-                                        <button
                                             onClick={() => onView(cert)}
                                             className="text-primary-600 hover:text-primary-900 transition-colors"
-                                            title="Inspect Full Decryption"
+                                            title="Inspect Details"
                                         >
                                             <EyeIcon className="h-5 w-5" />
                                         </button>
