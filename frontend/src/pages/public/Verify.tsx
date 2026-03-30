@@ -272,19 +272,21 @@ export default function Verify() {
                                                 </div>
                                             </div>
                                         )}
-                                        <PremiumCertificateCard
-                                            data={{
-                                                name: data.data.name,
-                                                roll: data.data.roll,
-                                                degree: data.data.degree,
-                                                department: data.data.department,
-                                                year: data.data.year,
-                                                cgpa: data.data.cgpa
-                                            }}
-                                            publicId={data.public_id || id || ''}
-                                            minimal={!isDocumentView}
-                                            forceFormal={isDocumentView}
-                                        />
+                                        <div className="anim-scale certificate-print">
+                                            <PremiumCertificateCard
+                                                data={{
+                                                    name: data.data.name,
+                                                    roll: data.data.roll,
+                                                    degree: data.data.degree,
+                                                    department: data.data.department,
+                                                    year: data.data.year,
+                                                    cgpa: data.data.cgpa
+                                                }}
+                                                publicId={data.public_id || id || ''}
+                                                minimal={!isDocumentView}
+                                                forceFormal={isDocumentView}
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Action Buttons - Only in Document View */}

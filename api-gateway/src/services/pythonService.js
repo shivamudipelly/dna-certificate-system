@@ -3,11 +3,16 @@ import { configureEnvironment } from '../config/index.js';
 
 const config = configureEnvironment();
 
+console.log("ENGINE URL:", config.cryptoEngineUrl);
+console.log("ENGINE KEY:", config.engineApiKey);
+
 export const pythonService = {
     /**
      * Reaches out to the Internal mathematical Crypto Engine to Encrypt Standard JSON Data
      */
     encryptCertificate: async (data) => {
+        console.log(data, 'config ',config.cryptoEngineUrl);
+        
         try {
             const response = await axios.post(
                 `${config.cryptoEngineUrl}/encrypt`,

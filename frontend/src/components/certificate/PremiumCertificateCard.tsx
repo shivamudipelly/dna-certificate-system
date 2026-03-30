@@ -84,26 +84,30 @@ export default function PremiumCertificateCard({ data, publicId, verificationUrl
                     </div>
                 </div>
             )}
-
+            {/* <div className="anim-scale certificate-print"> */}
             {/* ── HIGH-FIDELITY FORMAL CERTIFICATE ── */}
             {(forceFormal || !minimal) && (
                 <div className={`${!forceFormal ? 'print-only' : 'anim-fade-up'} certificate-formal-container`} style={forceFormal ? { width: '100%', maxWidth: 1000, margin: '0 auto', paddingBottom: 60 } : {}}>
-                    <div id="certificate-print-area" className="cert-paper" style={{
-                        position: 'relative',
-                        width: '1000px', // Fixed width for better control
-                        minHeight: '707px', // A4 Landscape ratio-ish
-                        background: '#fffef5',
-                        color: '#1a1a1a',
-                        margin: '0 auto',
-                        padding: '60px 80px',
-                        boxSizing: 'border-box',
-                        boxShadow: forceFormal ? '0 40px 100px rgba(0,0,0,0.6)' : 'none',
-                        fontFamily: "'Merriweather', serif",
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        border: '2px solid #b45309'
-                    }}>
+                    <div
+                        id="certificate-print-area"
+                        className="cert-paper"
+                        style={{
+                            position: 'relative',
+                            width: '277mm',
+                            minHeight: '180mm',
+                            background: '#fffef5',
+                            color: '#1a1a1a',
+                            margin: '0 auto',
+                            padding: '12mm 18mm',
+                            boxSizing: 'border-box',
+                            boxShadow: forceFormal ? '0 40px 100px rgba(0,0,0,0.6)' : 'none',
+                            fontFamily: "'Merriweather', serif",
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            border: '2px solid #b45309'
+                        }}
+                    >
                         {/* Ornamental Border Inner */}
                         <div style={{ position: 'absolute', inset: '12px', border: '8px double #b45309', pointerEvents: 'none' }} />
 
@@ -188,31 +192,7 @@ export default function PremiumCertificateCard({ data, publicId, verificationUrl
                     </div>
                 </div>
             )}
-
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&family=Dancing+Script:wght@700&display=swap');
-                
-                @media print {
-                    body * { visibility: hidden; }
-                    .screen-only { display: none !important; }
-                    .print-only { display: block !important; }
-                    #certificate-print-area, #certificate-print-area * { visibility: visible; }
-                    #certificate-print-area { 
-                        position: absolute; 
-                        left: 50% !important; 
-                        top: 50% !important; 
-                        transform: translate(-50%, -50%) scale(0.95);
-                        width: 1000px !important;
-                        height: 707px !important;
-                        padding: 60px 80px !important;
-                        box-shadow: none !important;
-                    }
-                    @page {
-                        size: A4 landscape;
-                        margin: 0;
-                    }
-                }
-            `}</style>
+            {/* </div> */}
         </>
     );
 }

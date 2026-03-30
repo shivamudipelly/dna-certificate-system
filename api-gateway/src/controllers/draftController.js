@@ -24,9 +24,9 @@ export const createDraft = async (req, res, next) => {
 
         // Guard: Clerk MUST have a department assigned in their account
         if (req.admin.role === 'Clerk' && !req.admin.department) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Your account has no department assigned. Please contact the SuperAdmin to assign you a department before creating drafts.' 
+            return res.status(400).json({
+                success: false,
+                error: 'Your account has no department assigned. Please contact the SuperAdmin to assign you a department before creating drafts.'
             });
         }
 
@@ -86,7 +86,7 @@ export const getDrafts = async (req, res, next) => {
         if (req.admin.role === 'Clerk') {
             query = { createdBy: req.admin._id };
         } else if (req.admin.role === 'HOD') {
-            query = { 
+            query = {
                 status: { $in: ['Submitted', 'RevertedToHOD'] },
                 department: req.admin.department
             };
@@ -168,7 +168,7 @@ export const revertToClerk = async (req, res, next) => {
 
         draft.status = 'Reverted';
         draft.remarks = remarks;
-        
+
         // HOD Authorization Check: Must match draft's department
         if (req.admin.role === 'HOD' && draft.department !== req.admin.department) {
             return res.status(403).json({ success: false, error: 'Forbidden: You can only revert drafts for your own department' });
@@ -217,6 +217,7 @@ export const revertToHOD = async (req, res, next) => {
 export const approveDraft = async (req, res, next) => {
     try {
         const draft = await DraftCertificate.findById(req.params.id);
+        console.log(draft);
         if (!draft) return res.status(404).json({ success: false, error: 'Draft not found' });
 
         if (draft.status !== 'Verified') {
@@ -234,7 +235,8 @@ export const approveDraft = async (req, res, next) => {
 
         logger.info(`[Draft Controller] Approving and passing to Crypto Engine... [ReqID: ${req.id}]`);
         const { dna_payload, chaotic_seed } = await pythonService.encryptCertificate(certificateData);
-
+        console.log('dna payload: ', dna_payload);
+        console.log('seed: ', chaotic_seed);
         const public_id = uuidv4().replace(/-/g, '').substring(0, 10);
 
         // Compute SHA-256 tamper-proof hash (required by Certificate schema)
