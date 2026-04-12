@@ -38,9 +38,16 @@ export interface Certificate {
     issued_by: string; // Admin reference ID
     verification_count: number;
     last_verified_at?: string;
-    // Expanded conditionally depending on route/decode state
     metadata?: DecryptedMetadata;
     dna_payload?: string; // Restricted explicitly based on the return block
+    history?: Array<{
+        action: string;
+        fromStatus: string;
+        toStatus: string;
+        actor: { email: string; role: string };
+        remarks?: string;
+        timestamp: string;
+    }>;
 }
 
 // ---- API Response Generics ---- //

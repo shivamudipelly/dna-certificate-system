@@ -11,7 +11,7 @@ import {
     approveDraft
 } from '../controllers/draftController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
-
+import { checkExistingRegistry } from '../middleware/checkExisting.js';
 const router = express.Router();
 
 // Validation Middleware
@@ -28,8 +28,8 @@ const draftValidation = [
 router.use(protect);
 
 // Clerk
-router.post('/', authorize('Clerk', 'HOD', 'SuperAdmin'), draftValidation, createDraft);
-router.put('/:id', authorize('Clerk', 'HOD', 'SuperAdmin'), draftValidation, editDraft);
+router.post('/', authorize('Clerk', 'HOD', 'SuperAdmin'), draftValidation, checkExistingRegistry, createDraft);
+router.put('/:id', authorize('Clerk', 'HOD', 'SuperAdmin'), draftValidation, checkExistingRegistry, editDraft);
 router.put('/:id/submit', authorize('Clerk', 'HOD', 'SuperAdmin'), submitDraft);
 
 // Get route for everyone (filtered in controller based on role)

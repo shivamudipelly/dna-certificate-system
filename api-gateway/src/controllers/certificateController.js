@@ -1,11 +1,26 @@
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import Certificate from '../models/Certificate.js';
-import AuditLog from '../models/AuditLog.js';
+
 import { pythonService } from '../services/pythonService.js';
 import { qrService } from '../services/qrService.js';
 import { validationResult } from 'express-validator';
 import { auditLog, logger } from '../utils/logger.js';
+
+const addHistory = (cert, action, req, remarks = null) => {
+    cert.history.push({
+        action,
+        fromStatus: cert.status,
+        toStatus: cert.status, // will be updated before save
+        actor: {
+            id: req.admin._id,
+            email: req.admin.email,
+            role: req.admin.role
+        },
+        remarks: remarks || null,
+        timestamp: new Date()
+    });
+};
 
 /**
  * Handle validation errors from express-validator universally
@@ -259,8 +274,10 @@ export const reissueCertificate = async (req, res, next) => {
             });
 
             // Mark old one as forwarded
+            addHistory(certificate, 'REPLACED_FORWARDED', req, `Replaced by new ID: ${new_public_id}`);
             certificate.replaced_by = new_public_id;
             certificate.status = 'revoked'; // Old one is formally replaced
+            certificate.history[certificate.history.length - 1].toStatus = 'revoked';
             await certificate.save();
 
             auditLog('CERT_REPLACE', req.id, 201, `Legacy ${public_id} replaced/forwarded to ${new_public_id}`, req.ip, req.get('User-Agent'));
@@ -273,6 +290,7 @@ export const reissueCertificate = async (req, res, next) => {
         }
 
         // Standard Restore Mode: Update in-place
+        addHistory(certificate, 'DATA_REPAIR', req, 'In-place data correction performed.');
         certificate.student_name = certificateData.name;
         certificate.roll_number = certificateData.roll;
         certificate.department = certificateData.department;
@@ -283,6 +301,7 @@ export const reissueCertificate = async (req, res, next) => {
         certificate.chaotic_seed = chaotic_seed;
         certificate.certificate_hash = certificate_hash;
         certificate.status = 'active';
+        certificate.history[certificate.history.length - 1].toStatus = 'active';
 
         await certificate.save();
 
@@ -316,7 +335,9 @@ export const revokeCertificate = async (req, res, next) => {
             return res.status(400).json({ success: false, error: 'Certificate is already revoked' });
         }
 
+        addHistory(certificate, 'REVOKED', req);
         certificate.status = 'revoked';
+        certificate.history[certificate.history.length - 1].toStatus = 'revoked';
         await certificate.save();
 
         auditLog('CERT_REVOKE', req.id, 200, `Administrator ${req.admin._id} actively revoked Certificate ${public_id}`, req.ip, req.get('User-Agent'));

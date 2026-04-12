@@ -1,7 +1,7 @@
 import Admin from '../models/Admin.js';
-import AuditLog from '../models/AuditLog.js';
+
 import { tokenService } from '../services/tokenService.js';
-import { auditLog } from '../utils/logger.js';
+import { logger, auditLog } from '../utils/logger.js';
 
 /**
  * Custom Error wrapper to enforce strictly 400 Bad Request error standards cleanly
@@ -24,7 +24,7 @@ export const register = async (req, res, next) => {
         }
 
         // Optional Role constraint (defaults to Clerk if blank)
-        const validRoles = ['HOD', 'Clerk', 'SuperAdmin'];
+        const validRoles = ['HOD', 'Clerk'];
         if (role && !validRoles.includes(role)) {
             return sendError(res, 400, 'Invalid role assignment');
         }
@@ -147,27 +147,13 @@ export const deleteUser = async (req, res, next) => {
 
         // 1. ROOT PROTECTION: Immutable System Owner check
         if (targetAdmin.is_root) {
-            await AuditLog.create({
-                action: 'DELETE_DENIED',
-                adminId: req.admin._id,
-                targetId: id,
-                details: 'Attempted to delete the indestructible Root System Owner',
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent')
-            });
+            auditLog('DELETE_DENIED', req.id, 403, `User ${req.admin._id} attempted to delete the indestructible Root System Owner`, req.ip, req.get('User-Agent'));
             return sendError(res, 403, 'Cannot delete the Root System Owner.');
         }
 
         await Admin.findByIdAndDelete(id);
 
-        await AuditLog.create({
-            action: 'USER_DELETED',
-            adminId: req.admin._id,
-            targetId: id,
-            details: `Admin ${targetAdmin.email} deleted successfully`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
+        auditLog('USER_DELETED', req.id, 200, `Admin ${targetAdmin.email} deleted successfully by ${req.admin._id}`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({
             success: true,
@@ -187,21 +173,14 @@ export const editUser = async (req, res, next) => {
 
         if (targetAdmin.is_root) return sendError(res, 403, 'Cannot modify the Root System Owner.');
 
-        const validRoles = ['HOD', 'Clerk', 'SuperAdmin'];
+        const validRoles = ['HOD', 'Clerk'];
         if (role && !validRoles.includes(role)) return sendError(res, 400, 'Invalid role');
 
         if (role) targetAdmin.role = role;
         if (department !== undefined) targetAdmin.department = department;
         await targetAdmin.save({ validateBeforeSave: false });
 
-        await AuditLog.create({
-            action: 'USER_EDITED',
-            adminId: req.admin._id,
-            targetId: id,
-            details: `User ${targetAdmin.email} updated — role: ${targetAdmin.role}, dept: ${targetAdmin.department}`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
+        auditLog('USER_EDITED', req.id, 200, `User ${targetAdmin.email} updated — role: ${targetAdmin.role}, dept: ${targetAdmin.department} by ${req.admin._id}`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({ success: true, user: { _id: targetAdmin._id, email: targetAdmin.email, role: targetAdmin.role, department: targetAdmin.department, isActive: targetAdmin.isActive } });
     } catch (error) { next(error); }

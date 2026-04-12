@@ -77,7 +77,19 @@ const CertificateSchema = new mongoose.Schema({
         type: String, // Public ID of the successor certificate
         default: null,
         index: true
-    }
+    },
+    history: [{
+        action: { type: String, required: true },
+        fromStatus: { type: String },
+        toStatus: { type: String },
+        actor: {
+            id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+            email: { type: String },
+            role: { type: String }
+        },
+        remarks: { type: String },
+        timestamp: { type: Date, default: Date.now }
+    }]
 }, {
     timestamps: true
 });

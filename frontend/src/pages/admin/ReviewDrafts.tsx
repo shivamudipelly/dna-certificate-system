@@ -12,6 +12,14 @@ interface Draft {
     status: string; remarks?: string;
     createdBy?: { email: string; role: string };
     createdAt: string;
+    history?: Array<{
+        action: string;
+        fromStatus: string;
+        toStatus: string;
+        actor: { email: string; role: string };
+        remarks?: string;
+        timestamp: string;
+    }>;
 }
 
 // ─── Remarks Modal ─────────────────────────────────────────────────────────
@@ -294,7 +302,42 @@ export default function ReviewDrafts() {
                                     </div>
                                     {draft.remarks && (
                                         <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderLeft: '3px solid var(--c-red)', borderRadius: 6, fontSize: 13, color: '#fb7185' }}>
-                                            <strong>Remarks:</strong> {draft.remarks}
+                                            <strong>Current Remarks:</strong> {draft.remarks}
+                                        </div>
+                                    )}
+
+                                    {/* History Trail */}
+                                    {draft.history && draft.history.length > 0 && (
+                                        <div style={{ marginTop: 15 }}>
+                                            <details className="history-details">
+                                                <summary style={{ fontSize: 12, color: 'var(--c-text-faint)', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <span style={{ width: 12, height: 12, display: 'flex' }}><Icons.Activity /></span>
+                                                    View Lifecycle History ({draft.history.length})
+                                                </summary>
+                                                <div style={{ marginTop: 10, paddingLeft: 10, borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                                    {draft.history.map((h, i) => (
+                                                        <div key={i} style={{ fontSize: 12 }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                                                <span style={{ color: 'var(--c-text-muted)', fontWeight: 600 }}>{h.action}</span>
+                                                                <span style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>• {new Date(h.timestamp).toLocaleString()}</span>
+                                                            </div>
+                                                            <div style={{ color: 'var(--c-text-faint)' }}>
+                                                                Performed by: <span style={{ color: 'var(--c-accent)' }}>{h.actor.email}</span> ({h.actor.role})
+                                                            </div>
+                                                            {h.remarks && (
+                                                                <div style={{ marginTop: 4, fontStyle: 'italic', color: 'var(--c-text-muted)', paddingLeft: 8, borderLeft: '2px solid var(--c-accent-muted)' }}>
+                                                                    "{h.remarks}"
+                                                                </div>
+                                                            )}
+                                                            {h.fromStatus && h.toStatus && h.fromStatus !== h.toStatus && (
+                                                                <div style={{ marginTop: 2, fontSize: 10, color: 'var(--c-text-faint)' }}>
+                                                                    Status Change: {h.fromStatus} → {h.toStatus}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
                                         </div>
                                     )}
                                 </div>

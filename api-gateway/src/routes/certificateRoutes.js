@@ -9,7 +9,7 @@ import {
     reissueCertificate
 } from '../controllers/certificateController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
-
+import { checkExistingRegistry } from '../middleware/checkExisting.js';
 const router = express.Router();
 
 // Route Protection Rate Limiter (Public Scraper Protection)
@@ -38,7 +38,7 @@ const certificateValidators = [
  */
 
 // POST /api/certificates - Only HOD & SuperAdmin can issue certificates (Clerks are strictly view-only).
-router.post('/', protect, authorize('HOD', 'SuperAdmin'), certificateValidators, issueCertificate);
+router.post('/', protect, authorize('HOD', 'SuperAdmin'), certificateValidators, checkExistingRegistry, issueCertificate);
 
 // GET /api/certificates - Current Admin lists only their certificates
 router.get('/', protect, getAdminCertificates);

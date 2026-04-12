@@ -329,8 +329,8 @@ export default function IssueCertificate() {
                                 </div>
                             )}
                             <button type="submit" className="btn btn-primary btn-lg" disabled={isSubmitting} style={{ gap: 8, marginLeft: 'auto' }}>
-                                <span style={{ width: 18, height: 18, display: 'flex' }}><Icons.DNA /></span>
-                                {user?.role === 'Clerk' ? 'Submit for HOD Review' : 'Commence Encryption'}
+                                <span style={{ width: 18, height: 18, display: 'flex' }}>{user?.role === 'Clerk' ? <Icons.DNA /> : <Icons.DNA />}</span>
+                                {user?.role === 'Clerk' ? 'Save Draft' : 'Commence Encryption'}
                             </button>
                         </div>
                     </form>

@@ -38,7 +38,6 @@ function EditModal({ user, onClose, onSaved }: { user: User; onClose: () => void
                     <select className="form-select" value={role} onChange={e => setRole(e.target.value as any)}>
                         <option value="Clerk">Clerk</option>
                         <option value="HOD">HOD</option>
-                        <option value="SuperAdmin">SuperAdmin</option>
                     </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 24 }}>
@@ -188,10 +187,13 @@ export default function ManageUsers() {
                                     {u.isActive ? <span style={{ color: 'var(--c-green-bright)', fontSize: 13 }}>● Active</span> : <span style={{ color: 'var(--c-red)', fontSize: 13 }}>Suspended</span>}
                                 </td>
                                 <td style={{ padding: '14px 18px' }}>
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => setEditUser(u)}>Edit</button>
-                                        <button className="btn btn-danger btn-sm" onClick={() => setDeleteUserTarget(u)}>Delete</button>
-                                    </div>
+                                    {!(u as any).is_root && (
+                                        <div style={{ display: 'flex', gap: 8 }}>
+                                            <button className="btn btn-secondary btn-sm" onClick={() => setEditUser(u)}>Edit</button>
+                                            <button className="btn btn-danger btn-sm" onClick={() => setDeleteUserTarget(u)}>Delete</button>
+                                        </div>
+                                    )}
+                                    {(u as any).is_root && <span style={{ color: 'var(--c-text-faint)', fontSize: 11, fontStyle: 'italic' }}>System Owner</span>}
                                 </td>
                             </tr>
                         ))}

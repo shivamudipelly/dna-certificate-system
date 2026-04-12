@@ -198,17 +198,19 @@ export default function CertificateList() {
                     <p>{totalCount} certificate{totalCount !== 1 ? 's' : ''} issued · Page {currentPage} of {totalPages}</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                    <button
-                        onClick={runHealthCheck}
-                        className={`btn ${isCheckingHealth ? 'btn-secondary' : 'btn-primary'} btn-sm`}
-                        disabled={isCheckingHealth || isLoading}
-                        style={{ gap: 6 }}
-                    >
-                        <span style={{ width: 14, height: 14, display: 'flex' }}>
-                            {isCheckingHealth ? <div className="spinner" /> : <Icons.Shield />}
-                        </span>
-                        {isCheckingHealth ? 'Scanning Registry...' : 'Institutional Health Check'}
-                    </button>
+                    {isSuperAdmin && (
+                        <button
+                            onClick={runHealthCheck}
+                            className={`btn ${isCheckingHealth ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                            disabled={isCheckingHealth || isLoading}
+                            style={{ gap: 6 }}
+                        >
+                            <span style={{ width: 14, height: 14, display: 'flex' }}>
+                                {isCheckingHealth ? <div className="spinner" /> : <Icons.Shield />}
+                            </span>
+                            {isCheckingHealth ? 'Scanning Registry...' : 'Institutional Health Check'}
+                        </button>
+                    )}
                     <button onClick={() => fetchCerts(currentPage)} className="btn btn-secondary btn-sm" style={{ gap: 6 }}>
                         <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Activity /></span>
                         Refresh
@@ -414,6 +416,35 @@ export default function CertificateList() {
                             <div style={{ padding: 40, textAlign: 'center' }}>
                                 <div className="spinner" style={{ borderTopColor: 'var(--c-accent)' }} />
                                 <div style={{ marginTop: 16, color: 'var(--c-text-muted)' }}>Decrypting DNA payload...</div>
+                            </div>
+                        )}
+
+                        {/* History Section */}
+                        {selected && selected.history && selected.history.length > 0 && (
+                            <div style={{ marginTop: 24, padding: '0 4px' }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text-muted)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ width: 14, height: 14, display: 'flex' }}><Icons.Activity /></span>
+                                    Lifecycle History
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 12, borderLeft: '2px solid rgba(124,58,237,0.15)' }}>
+                                    {selected.history.map((h, i) => (
+                                        <div key={i} style={{ position: 'relative' }}>
+                                            <div style={{ position: 'absolute', left: -21, top: 4, width: 8, height: 8, borderRadius: '50%', background: h.action === 'REVOKED' ? 'var(--c-red)' : 'var(--c-accent)', border: '2px solid var(--c-bg-plate)' }} />
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: h.action === 'REVOKED' ? 'var(--c-red)' : 'var(--c-text)' }}>{h.action}</span>
+                                                <span style={{ fontSize: 10, color: 'var(--c-text-faint)' }}>{new Date(h.timestamp).toLocaleString()}</span>
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--c-text-faint)' }}>
+                                                By: <span style={{ color: 'var(--c-text-muted)' }}>{h.actor.email}</span> ({h.actor.role})
+                                            </div>
+                                            {h.remarks && (
+                                                <div style={{ marginTop: 4, fontSize: 12, color: 'var(--c-text-muted)', fontStyle: 'italic', padding: '4px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}>
+                                                    "{h.remarks}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

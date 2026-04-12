@@ -12,6 +12,7 @@ import { logger, auditLog } from './utils/logger.js';
 import authRoutes from './routes/authRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
 import draftRoutes from './routes/draftRoutes.js';
+import { protect, authorize } from './middleware/authMiddleware.js';
 
 // 1. Initialize configuration and environment validation
 const config = configureEnvironment();
@@ -102,6 +103,7 @@ app.get('/api/health/crypto', async (req, res) => {
         const timeoutId = setTimeout(() => controller.abort(), 45000);
         
         const response = await fetch(`${config.cryptoEngineUrl}/health`, { signal: controller.signal });
+        console.log(response);
         clearTimeout(timeoutId);
         
         const data = await response.json();

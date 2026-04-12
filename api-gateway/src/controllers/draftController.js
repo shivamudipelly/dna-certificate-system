@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { validationResult } from 'express-validator';
 import DraftCertificate from '../models/DraftCertificate.js';
 import Certificate from '../models/Certificate.js';
-import AuditLog from '../models/AuditLog.js';
+
 import { pythonService } from '../services/pythonService.js';
 import { qrService } from '../services/qrService.js';
 import { auditLog, logger } from '../utils/logger.js';
@@ -15,6 +15,21 @@ const checkValidations = (req, res) => {
         return false;
     }
     return true;
+};
+
+const addHistory = (draft, action, req, remarks = null) => {
+    draft.history.push({
+        action,
+        fromStatus: draft.status,
+        toStatus: draft.status, // will be updated before save
+        actor: {
+            id: req.admin._id,
+            email: req.admin.email,
+            role: req.admin.role
+        },
+        remarks: remarks || draft.remarks,
+        timestamp: new Date()
+    });
 };
 
 // POST /api/drafts - Clerk creates a new draft
@@ -39,17 +54,16 @@ export const createDraft = async (req, res, next) => {
             cgpa: req.body.cgpa,
             year: req.body.year,
             createdBy: req.admin._id,
-            status: 'Draft'
+            status: 'Draft',
+            history: [{
+                action: 'CREATED',
+                toStatus: 'Draft',
+                actor: { id: req.admin._id, email: req.admin.email, role: req.admin.role },
+                timestamp: new Date()
+            }]
         });
 
-        await AuditLog.create({
-            action: 'DRAFT_CREATED',
-            adminId: req.admin._id,
-            targetId: draft._id,
-            details: `Clerk drafted a new certificate for ${draft.roll}`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
+        auditLog('DRAFT_CREATED', req.id, 201, `Clerk ${req.admin._id} drafted a new certificate ${draft._id} for ${draft.roll}`, req.ip, req.get('User-Agent'));
 
         res.status(201).json({ success: true, draft });
     } catch (error) { next(error); }
@@ -118,18 +132,13 @@ export const submitDraft = async (req, res, next) => {
         if (!['Draft', 'Reverted'].includes(draft.status)) {
             return res.status(400).json({ success: false, error: 'Only Draft or Reverted can be submitted' });
         }
+        addHistory(draft, 'SUBMITTED', req);
         draft.status = 'Submitted';
-        draft.remarks = null; // clear remarks
+        draft.remarks = null; // clear current remarks
+        draft.history[draft.history.length - 1].toStatus = 'Submitted';
         await draft.save();
 
-        await AuditLog.create({
-            action: 'DRAFT_SUBMITTED',
-            adminId: req.admin._id,
-            targetId: draft._id,
-            details: `Clerk submitted draft ${draft._id} to HOD for verification`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
+        auditLog('DRAFT_SUBMITTED', req.id, 200, `Clerk ${req.admin._id} submitted draft ${draft._id} to HOD for verification`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({ success: true, draft });
     } catch (error) { next(error); }
@@ -149,18 +158,13 @@ export const verifyDraft = async (req, res, next) => {
         if (req.admin.role === 'HOD' && draft.department !== req.admin.department) {
             return res.status(403).json({ success: false, error: 'Forbidden: You can only verify drafts for your own department' });
         }
+        addHistory(draft, 'VERIFIED', req);
         draft.status = 'Verified';
         draft.remarks = null;
+        draft.history[draft.history.length - 1].toStatus = 'Verified';
         await draft.save();
 
-        await AuditLog.create({
-            action: 'DRAFT_VERIFIED',
-            adminId: req.admin._id,
-            targetId: draft._id,
-            details: `HOD verified draft ${draft._id} and forwarded to SuperAdmin`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
+        auditLog('DRAFT_VERIFIED', req.id, 200, `HOD ${req.admin._id} verified draft ${draft._id} and forwarded to SuperAdmin`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({ success: true, draft });
     } catch (error) { next(error); }
@@ -174,23 +178,13 @@ export const revertToClerk = async (req, res, next) => {
         const draft = await DraftCertificate.findById(req.params.id);
         if (!draft) return res.status(404).json({ success: false, error: 'Draft not found' });
 
+        addHistory(draft, 'REVERTED_TO_CLERK', req, remarks);
         draft.status = 'Reverted';
         draft.remarks = remarks;
-
-        // HOD Authorization Check: Must match draft's department
-        if (req.admin.role === 'HOD' && draft.department !== req.admin.department) {
-            return res.status(403).json({ success: false, error: 'Forbidden: You can only revert drafts for your own department' });
-        }
+        draft.history[draft.history.length - 1].toStatus = 'Reverted';
         await draft.save();
 
-        await AuditLog.create({
-            action: 'DRAFT_REVERTED_CLERK',
-            adminId: req.admin._id,
-            targetId: draft._id,
-            details: `HOD/SuperAdmin reverted draft ${draft._id} to Clerk. Reason: ${remarks}`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
+        auditLog('DRAFT_REVERTED_CLERK', req.id, 200, `HOD/SuperAdmin ${req.admin._id} reverted draft ${draft._id} to Clerk. Reason: ${remarks}`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({ success: true, draft });
     } catch (error) { next(error); }
@@ -204,18 +198,13 @@ export const revertToHOD = async (req, res, next) => {
         const draft = await DraftCertificate.findById(req.params.id);
         if (!draft) return res.status(404).json({ success: false, error: 'Draft not found' });
 
+        addHistory(draft, 'REVERTED_TO_HOD', req, remarks);
         draft.status = 'RevertedToHOD';
         draft.remarks = remarks;
+        draft.history[draft.history.length - 1].toStatus = 'RevertedToHOD';
         await draft.save();
 
-        await AuditLog.create({
-            action: 'DRAFT_REVERTED_HOD',
-            adminId: req.admin._id,
-            targetId: draft._id,
-            details: `SuperAdmin reverted draft ${draft._id} to HOD. Reason: ${remarks}`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
+        auditLog('DRAFT_REVERTED_HOD', req.id, 200, `SuperAdmin ${req.admin._id} reverted draft ${draft._id} to HOD. Reason: ${remarks}`, req.ip, req.get('User-Agent'));
 
         res.status(200).json({ success: true, draft });
     } catch (error) { next(error); }
@@ -251,8 +240,8 @@ export const approveDraft = async (req, res, next) => {
 
         const verification_url = qrService.getVerificationUrl(public_id);
 
-        // Maximum Optimization: Parallel Execution of 4 I/O bottleneck operations (Create, Delete, Logs, QR)
-        const [ , , , qr_code] = await Promise.all([
+        // Secure Persistence Mode: Create Certificate but KEEP Draft for history tracking
+        const [cert, qr_code] = await Promise.all([
             Certificate.create({
                 public_id,
                 student_name: certificateData.name,
@@ -264,19 +253,18 @@ export const approveDraft = async (req, res, next) => {
                 dna_payload,
                 chaotic_seed,
                 certificate_hash,
-                issued_by: req.admin._id
-            }),
-            DraftCertificate.findByIdAndDelete(draft._id),
-            AuditLog.create({
-                action: 'DRAFT_APPROVED',
-                adminId: req.admin._id,
-                targetId: public_id,
-                details: `SuperAdmin approved draft ${draft._id} and permanently minted Certificate ${public_id}`,
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent')
+                issued_by: req.admin._id,
+                history: draft.history // Port over the entire origin story
             }),
             qrService.generateQRCode(verification_url)
         ]);
+
+        // Mark Draft as Issued and link it
+        addHistory(draft, 'ISSUED', req);
+        draft.status = 'Issued';
+        draft.certificateId = cert._id;
+        draft.history[draft.history.length - 1].toStatus = 'Issued';
+        await draft.save();
 
         auditLog('DRAFT_APPROVED', req.id, 201, `Draft ${draft._id} approved and encrypted into Certificate ${public_id}`, req.ip, req.get('User-Agent'));
 
