@@ -1,6 +1,7 @@
 import Admin from '../models/Admin.js';
 import { logger } from '../utils/logger.js';
 import bcrypt from 'bcryptjs';
+import { configureEnvironment } from './index.js';
 
 /**
  * Initializes the Root Super Admin if it doesn't already exist.
@@ -8,9 +9,10 @@ import bcrypt from 'bcryptjs';
  */
 export const seedRootAdmin = async () => {
     try {
-        const rootEmail = process.env.ROOT_ADMIN_EMAIL;
-        const rootPassword = process.env.ROOT_ADMIN_PASSWORD;
-        const rootDepartment = process.env.ROOT_ADMIN_DEPARTMENT;
+        const config = configureEnvironment();
+        const rootEmail = config.rootAdminEmail;
+        const rootPassword = config.rootAdminPassword;
+        const rootDepartment = config.rootAdminDepartment;
 
         // Check if root already exists based on the absolute is_root flag
         const existingRoot = await Admin.findOne({ is_root: true });

@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 
 const pages: Record<string, string> = {
@@ -13,20 +13,22 @@ const pages: Record<string, string> = {
     '/admin/settings': 'Settings',
 };
 
-export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
+export default React.memo(function Header({ onMenuClick }: { onMenuClick: () => void }) {
     const { pathname } = useLocation();
     const { user } = useAuth();
     const [isOnline, setIsOnline] = useState(true);
-
-    // Dynamic live/offline health check every 30s
+    // Dynamic listener for connectivity instead of polling
     useEffect(() => {
-        const check = async () => {
-            try { await api.get('/health'); setIsOnline(true); }
-            catch { setIsOnline(false); }
+        const handleOffline = () => setIsOnline(false);
+        const handleOnline = () => setIsOnline(true);
+        
+        window.addEventListener('server:offline', handleOffline);
+        window.addEventListener('server:online', handleOnline);
+        
+        return () => {
+            window.removeEventListener('server:offline', handleOffline);
+            window.removeEventListener('server:online', handleOnline);
         };
-        check();
-        const interval = setInterval(check, 30000);
-        return () => clearInterval(interval);
     }, []);
 
     let title = Object.entries(pages).find(([k]) => pathname.startsWith(k))?.[1] ?? 'Admin';
@@ -76,4 +78,4 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
         </header>
     );
-}
+});

@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from './components/ProtectedRoute';
-import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import AdminLayout from './components/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -13,8 +12,6 @@ import ReviewDrafts from './pages/admin/ReviewDrafts';
 import Verify from './pages/public/Verify';
 
 function App() {
-    const { user } = useAuth(); // or remove entirely if unused, but let's check. Wait, neither is used in App.tsx. Let's just remove the hook call.
-
     return (
         <>
             <Toaster

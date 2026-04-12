@@ -1,5 +1,6 @@
 import { tokenService } from '../services/tokenService.js';
 import Admin from '../models/Admin.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Route protection middleware to verify JWT via Bearer Header
@@ -20,8 +21,8 @@ export const protect = async (req, res, next) => {
         // 2. Mathematically verify Token Integrity & Signature
         const decoded = tokenService.verifyToken(token);
 
-        // 3. Verify user still exists in the Database and is active
-        const admin = await Admin.findById(decoded.sub);
+        // 3. Verify user still exists in the Database and is active (Optimized: Fetches purely the necessary fields and returns lightweight JSON)
+        const admin = await Admin.findById(decoded.sub).select('_id role department isActive').lean();
         if (!admin || !admin.isActive) {
             return res.status(401).json({ success: false, error: 'The administrator token belongs to no longer exists or is inactive.' });
         }
@@ -30,7 +31,7 @@ export const protect = async (req, res, next) => {
         req.admin = admin;
         next();
     } catch (error) {
-        console.error(`[Auth Middleware Error] - ${error.message}`);
+        logger.error(`[Auth Middleware Error] - ${error.message}`, { ip: req.ip });
         return res.status(401).json({ success: false, error: 'Not authorized: ' + error.message });
     }
 };
@@ -46,7 +47,7 @@ export const authorize = (...roles) => {
         }
 
         if (!roles.includes(req.admin.role)) {
-            console.warn(`[RBAC Violation Attempt] User ${req.admin.email} (Role: ${req.admin.role}) attempted to access blocked route.`);
+            logger.warn(`[RBAC Violation Attempt] User ${req.admin.email || req.admin._id} (Role: ${req.admin.role}) attempted to access blocked route.`, { ip: req.ip });
             return res.status(403).json({
                 success: false,
                 error: `User role '${req.admin.role}' is not authorized to access this resource`

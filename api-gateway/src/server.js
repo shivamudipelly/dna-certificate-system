@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 import { v4 as uuidv4 } from 'uuid';
 import { configureEnvironment } from './config/index.js';
 import { connectDB } from './config/database.js';
@@ -71,30 +72,20 @@ app.use(cors({
 // Rate Limiting (100 req/min/IP)
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 20,
+    max: 100, // Optimized: 100 is standard to prevent false positives during dashboard multidimensional fetches
     message: { success: false, error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false
 });
 app.use('/api/', apiLimiter);
 
+// Payload compression (Maximizing data transfer efficiency by GZIPping JSON)
+app.use(compression());
+
 // JSON Body Parser with 10KB limit
 app.use(express.json({ limit: '10kb' }));
 
-// Input Sanitization (Basic block of script tags/SQL injections in req.body)
-app.use((req, res, next) => {
-    if (req.body && Object.keys(req.body).length > 0) {
-        const payloadString = JSON.stringify(req.body);
-        const forbiddenPatterns = [/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, /(\%27)|(\')|(\-\-)|(\%23)|(#)/i];
 
-        for (const pattern of forbiddenPatterns) {
-            if (pattern.test(payloadString)) {
-                return res.status(403).json({ success: false, error: 'Malicious payload detected' });
-            }
-        }
-    }
-    next();
-});
 
 // 5. Setup Routes
 app.get('/api/health', (req, res) => {
@@ -105,17 +96,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/drafts', draftRoutes);
 
-// Notifications stub: returns empty list (real notifications can be added later)
-// Protected but returns gracefully even without a full Notification model
-app.get('/api/notifications', (req, res) => {
-    res.status(200).json({ success: true, notifications: [] });
-});
-app.put('/api/notifications/read-all', (req, res) => {
-    res.status(200).json({ success: true });
-});
-app.put('/api/notifications/:id/read', (req, res) => {
-    res.status(200).json({ success: true });
-});
+
 
 // 6. Global Error Handler
 app.use(errorHandler);

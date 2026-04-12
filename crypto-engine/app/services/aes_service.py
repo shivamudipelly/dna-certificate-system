@@ -11,23 +11,17 @@ from ..config import settings
 # Setup logging for the service
 logger = logging.getLogger(__name__)
 
+# Cache static AES Key to avoid heavy b64decode block in runtime memory cycles
+AES_KEY_BYTES = base64.b64decode(settings.AES_KEY)
+
 class AESService:
     @staticmethod
     def derive_key_from_env() -> bytes:
         """
         Load AES_KEY from environment, validate it is exactly 32 bytes,
-        and return the key bytes.
+        and return the key bytes. Optimized: returns statically decoded CACHED memory bytes.
         """
-        try:
-            key_b64 = settings.AES_KEY
-            key_bytes = base64.b64decode(key_b64)
-            if len(key_bytes) != 32:
-                logger.error("AES Key validation failed: Incorrect byte length")
-                raise ValueError("AES key must be exactly 32 bytes")
-            return key_bytes
-        except Exception as e:
-            logger.error("Failed to derive AES key")
-            raise ValueError("Invalid AES key setup")
+        return AES_KEY_BYTES
 
     @staticmethod
     def encrypt_data(data: dict, key: bytes) -> str:

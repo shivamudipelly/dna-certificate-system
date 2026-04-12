@@ -8,7 +8,10 @@ export const configureEnvironment = () => {
         'JWT_SECRET',
         'CRYPTO_ENGINE_URL',
         'FRONTEND_URL',
-        'ENGINE_API_KEY'
+        'ENGINE_API_KEY',
+        'ROOT_ADMIN_EMAIL',
+        'ROOT_ADMIN_PASSWORD',
+        'ROOT_ADMIN_DEPARTMENT'
     ];
 
     const missingVars = requiredVars.filter((v) => !process.env[v]);
@@ -24,6 +27,9 @@ export const configureEnvironment = () => {
         jwtSecret: process.env.JWT_SECRET,
         cryptoEngineUrl: process.env.CRYPTO_ENGINE_URL,
         frontendUrl: process.env.FRONTEND_URL,
-        engineApiKey: process.env.ENGINE_API_KEY
+        engineApiKey: process.env.ENGINE_API_KEY,
+        rootAdminEmail: process.env.ROOT_ADMIN_EMAIL,
+        rootAdminPassword: process.env.ROOT_ADMIN_PASSWORD,
+        rootAdminDepartment: process.env.ROOT_ADMIN_DEPARTMENT
     };
 };

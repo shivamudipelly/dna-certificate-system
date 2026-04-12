@@ -1,14 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../Icons';
-import { useNotifications } from '../../context/NotificationContext';
 
 interface SidebarProps { open: boolean; onClose?: () => void; }
 
 export default function Sidebar({ open }: SidebarProps) {
     const { pathname } = useLocation();
     const { user, logout } = useAuth();
-    const { unreadCount } = useNotifications();
 
     const role = user?.role;
 
@@ -22,8 +20,7 @@ export default function Sidebar({ open }: SidebarProps) {
             name: role === 'Clerk' ? 'My Drafts' : role === 'HOD' ? 'Verify Details' : 'Review Drafts',
             href: '/admin/drafts',
             Icon: Icons.List,
-            show: true,
-            badge: role === 'HOD' ? unreadCount : 0
+            show: true
         },
         { name: 'All Certificates', href: '/admin/certificates', Icon: Icons.Certificate, show: true },
         { name: 'Manage Users', href: '/admin/users', Icon: Icons.User, show: role === 'SuperAdmin' },
@@ -47,7 +44,7 @@ export default function Sidebar({ open }: SidebarProps) {
             <nav className="sidebar-nav">
                 <div className="nav-section-title">Menu</div>
                 <div className="stagger">
-                    {navItems.map(({ name, href, Icon, badge }) => (
+                    {navItems.map(({ name, href, Icon }) => (
                         <Link
                             key={href}
                             to={href}
@@ -56,11 +53,6 @@ export default function Sidebar({ open }: SidebarProps) {
                         >
                             <span className="nav-item-icon"><Icon /></span>
                             {name}
-                            {badge ? (
-                                <span style={{ marginLeft: 'auto', background: 'var(--c-red)', color: '#fff', borderRadius: 10, fontSize: 10, padding: '1px 6px', fontWeight: 700 }}>
-                                    {badge > 9 ? '9+' : badge}
-                                </span>
-                            ) : null}
                         </Link>
                     ))}
                 </div>

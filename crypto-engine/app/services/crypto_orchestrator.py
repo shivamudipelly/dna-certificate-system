@@ -32,7 +32,7 @@ class CryptoOrchestrator:
             b64_cipher = aes_service.encrypt_data(encryption_envelope, key_bytes)
             
             # Step 4: Convert ciphertext to binary
-            binary_stream = "".join(format(ord(c), '08b') for c in b64_cipher)
+            binary_stream = "".join(format(b, '08b') for b in b64_cipher.encode('utf-8'))
             
             # Step 5: Generate chaotic seed from hash
             seed_x0 = chaos_service.generate_seed_from_hash(data_hash)
@@ -80,8 +80,9 @@ class CryptoOrchestrator:
             reverted_binary = dna_encoder.dna_to_binary_dynamic(reverted_dna, chaotic_sequence)
             
             # Step 4: Binary to AES ciphertext (base64)
-            chars = [chr(int(reverted_binary[i:i+8], 2)) for i in range(0, len(reverted_binary), 8)]
-            restored_b64 = "".join(chars)
+            restored_b64 = bytes(
+                int(reverted_binary[i:i+8], 2) for i in range(0, len(reverted_binary), 8)
+            ).decode('utf-8')
             
             # Step 5: AES decrypt
             key_bytes = aes_service.derive_key_from_env()

@@ -1,6 +1,9 @@
 import logging
+import itertools
 from .chaos_service import chaos_service
 from ..config import settings
+
+DNA_KEY_CACHE = settings.DNA_SECRET_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -98,23 +101,18 @@ class DNAEncoderService:
 
     def dna_xor(self, dna_string: str) -> str:
         """
-        Mutates DNA by applying XOR encryption using the DNA_SECRET_KEY
+        Mutates DNA by applying XOR encryption using the cached DNA_SECRET_KEY
         from the environment.
         """
         self._validate_dna(dna_string)
         
-        # Fetch Key sequence directly from env inside method per secure module access
-        key_sequence = settings.DNA_SECRET_KEY
-        key_len = len(key_sequence)
-        
-        mutated_dna = []
-        for i, nucleotide in enumerate(dna_string):
-            key_nucleotide = key_sequence[i % key_len]
-            mutated_nuc = self.XOR_TABLE_FORWARD[nucleotide][key_nucleotide]
-            mutated_dna.append(mutated_nuc)
+        mutated_dna = "".join(
+            self.XOR_TABLE_FORWARD[nuc][key_nuc] 
+            for nuc, key_nuc in zip(dna_string, itertools.cycle(DNA_KEY_CACHE))
+        )
             
         logger.info("DNA XOR forward mutation executed")
-        return "".join(mutated_dna)
+        return mutated_dna
 
     def dna_xor_reverse(self, mutated_dna: str) -> str:
         """
@@ -122,16 +120,12 @@ class DNAEncoderService:
         """
         self._validate_dna(mutated_dna)
         
-        key_sequence = settings.DNA_SECRET_KEY
-        key_len = len(key_sequence)
-        
-        original_dna = []
-        for i, mutated_nuc in enumerate(mutated_dna):
-            key_nucleotide = key_sequence[i % key_len]
-            original_nuc = self.XOR_TABLE_REVERSE[key_nucleotide][mutated_nuc]
-            original_dna.append(original_nuc)
+        original_dna = "".join(
+            self.XOR_TABLE_REVERSE[key_nuc][mut_nuc] 
+            for mut_nuc, key_nuc in zip(mutated_dna, itertools.cycle(DNA_KEY_CACHE))
+        )
             
         logger.info("DNA XOR reverse mutation executed")
-        return "".join(original_dna)
+        return original_dna
 
 dna_encoder = DNAEncoderService()

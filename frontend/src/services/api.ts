@@ -47,13 +47,18 @@ api.interceptors.request.use(
 
 // Response interceptor — unified error handling
 api.interceptors.response.use(
-    (response) => response.data,
+    (response) => {
+        window.dispatchEvent(new CustomEvent('server:online'));
+        return response.data;
+    },
     (error) => {
         const { response } = error;
         if (!response) {
+            window.dispatchEvent(new CustomEvent('server:offline'));
             return Promise.reject({ success: false, error: 'Network connection failed. Check your connection.' });
         }
 
+        window.dispatchEvent(new CustomEvent('server:online'));
         console.error('[API Error Body]:', response.data);
 
         if (response.status === 401) {
@@ -71,6 +76,7 @@ api.interceptors.response.use(
         return Promise.reject({ success: false, error: message });
     }
 );
+
 
 export const authAPI = {
     login: (email: string, password: string): Promise<AuthLoginResponse> => api.post('/auth/login', { email, password }),

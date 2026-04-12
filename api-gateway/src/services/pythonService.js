@@ -1,22 +1,18 @@
 import axios from 'axios';
 import { configureEnvironment } from '../config/index.js';
+import { logger } from '../utils/logger.js';
 
 const config = configureEnvironment();
-
-console.log("ENGINE URL:", config.cryptoEngineUrl);
-console.log("ENGINE KEY:", config.engineApiKey);
 
 export const pythonService = {
     /**
      * Reaches out to the Internal mathematical Crypto Engine to Encrypt Standard JSON Data
      */
     encryptCertificate: async (data) => {
-        console.log(data, 'config ',config.cryptoEngineUrl);
-        
         try {
             const response = await axios.post(
                 `${config.cryptoEngineUrl}/encrypt`,
-                { data: data }, // Match the EncryptRequest payload structure: { payload: { data } } wait the Python main expects: payload: { data: {} } ? No it expects {"data": {...}}
+                { data: data }, // Match the EncryptRequest payload structure
                 {
                     headers: {
                         'x-api-key': config.engineApiKey,
@@ -36,7 +32,7 @@ export const pythonService = {
 
         } catch (error) {
             const engineError = error.response?.data?.error || error.message;
-            console.error(`💥 [Crypto Engine Bridge] Encrypt Failed: ${engineError}`);
+            logger.error(`💥 [Crypto Engine Bridge] Encrypt Failed: ${engineError}`);
             throw new Error(`Encryption Engine Error: ${engineError}`);
         }
     },
@@ -65,19 +61,19 @@ export const pythonService = {
                 return response.data.data;
             }
 
-            console.error('[Crypto Engine Bridge] Unexpected Decrypt Response Format');
+            logger.error('[Crypto Engine Bridge] Unexpected Decrypt Response Format');
             throw new Error('Unknown Decryption format failure');
 
         } catch (error) {
             // Handle Crypto Engine strictly catching a tampered package
             if (error.response && error.response.status === 403 && error.response.data && error.response.data.error === 'TAMPERED') {
-                console.warn(`[Crypto Engine Bridge] TAMPERED PAYLOAD DETECTED! Denying validation.`);
+                logger.warn(`[Crypto Engine Bridge] TAMPERED PAYLOAD DETECTED! Denying validation.`);
                 const customErr = new Error("TAMPERED");
                 customErr.status = 403;
                 throw customErr;
             }
 
-            console.error(`💥 [Crypto Engine Bridge] Decrypt Failed: ${error.message}`);
+            logger.error(`💥 [Crypto Engine Bridge] Decrypt Failed: ${error.message}`);
             throw new Error('Decryption Service temporarily unavailable.');
         }
     }

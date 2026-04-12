@@ -56,8 +56,8 @@ export const issueCertificate = async (req, res, next) => {
         // 2. Build local tracker representations
         const public_id = uuidv4().replace(/-/g, '').substring(0, 10);
 
-        // Check for existing roll number in the SAME department/year (Registry Rule)
-        const existingCert = await Certificate.findOne({
+        // Check for existing roll number in the SAME department/year (Registry Rule) - Optimized: using mathematically faster .exists()
+        const existingCert = await Certificate.exists({
             roll_number: certificateData.roll,
             status: 'active'
         });
@@ -69,23 +69,25 @@ export const issueCertificate = async (req, res, next) => {
             });
         }
 
-        const cert = await Certificate.create({
-            public_id,
-            student_name: certificateData.name,
-            roll_number: certificateData.roll,
-            department: certificateData.department,
-            degree: certificateData.degree,
-            cgpa: certificateData.cgpa,
-            year: certificateData.year,
-            dna_payload,
-            chaotic_seed,
-            certificate_hash,
-            issued_by: req.admin._id
-        });
-
-        // 3. Return Verification URIs for FrontEnd Distribution
+        // 3. Parallelize DB Tracking and QR Generation to drastically minimize I/O stalling
         const verification_url = qrService.getVerificationUrl(public_id);
-        const qr_code = await qrService.generateQRCode(verification_url);
+        
+        const [cert, qr_code] = await Promise.all([
+            Certificate.create({
+                public_id,
+                student_name: certificateData.name,
+                roll_number: certificateData.roll,
+                department: certificateData.department,
+                degree: certificateData.degree,
+                cgpa: certificateData.cgpa,
+                year: certificateData.year,
+                dna_payload,
+                chaotic_seed,
+                certificate_hash,
+                issued_by: req.admin._id
+            }),
+            qrService.generateQRCode(verification_url)
+        ]);
 
         auditLog('CERT_ISSUE', req.id, 201, `New Certificate Created: ${public_id} Issuer: ${req.admin._id}`, req.ip, req.get('User-Agent'));
 
@@ -105,8 +107,8 @@ export const verifyCertificate = async (req, res, next) => {
     try {
         const { public_id } = req.params;
 
-        // 1. Fast Index lookup on Mongoose Schema String Key
-        let certificate = await Certificate.findOne({ public_id });
+        // 1. Fast Index lookup on Mongoose Schema String Key - Optimized with lean() memory footprint
+        let certificate = await Certificate.findOne({ public_id }).lean();
 
         if (!certificate) {
             auditLog('CERT_VERIFY_404', req.id, 404, `Lookup Failed - Target Missing: ${public_id}`, req.ip, req.get('User-Agent'));
@@ -137,7 +139,7 @@ export const verifyCertificate = async (req, res, next) => {
 
         // 2. Engage Crypto Engine decoding
         try {
-            console.log(`[Cert Controller] Sending DNA sequence to Crypto Engine for validation...`);
+            logger.info(`[Cert Controller] Sending DNA sequence to Crypto Engine for validation... [ReqID: ${req.id}]`);
             const decryptedData = await pythonService.decryptCertificate(
                 certificate.dna_payload,
                 certificate.chaotic_seed
@@ -152,7 +154,7 @@ export const verifyCertificate = async (req, res, next) => {
                 return res.status(403).json({ success: false, error: 'TAMPERED' });
             }
 
-            // 3. Mathematical Success -> Update Live Meta Properties
+            // 3. Mathematical Success -> Update Live Meta Properties without hydrating Mongoose Document
             await Certificate.updateOne(
                 { _id: certificate._id },
                 {
@@ -161,13 +163,10 @@ export const verifyCertificate = async (req, res, next) => {
                 }
             );
 
-            certificate.verification_count += 1;
-            certificate.last_verified_at = Date.now();
-
-            auditLog('CERT_VERIFY_SUCCESS', req.id, 200, `Decrypt Clean - Sequence Valid: ${public_id}`, req.ip, req.get('User-Agent'));
-
             const verification_url = qrService.getVerificationUrl(public_id);
             const qr_code = await qrService.generateQRCode(verification_url);
+
+            auditLog('CERT_VERIFY_SUCCESS', req.id, 200, `Decrypt Clean - Sequence Valid: ${public_id}`, req.ip, req.get('User-Agent'));
 
             res.status(200).json({
                 success: true,
@@ -202,7 +201,8 @@ export const getAdminCertificates = async (req, res, next) => {
             .select('-dna_payload')
             .skip((page - 1) * limit)
             .limit(limit)
-            .sort({ issued_at: -1 });
+            .sort({ issued_at: -1 })
+            .lean();
 
         const total = await Certificate.countDocuments(query);
 

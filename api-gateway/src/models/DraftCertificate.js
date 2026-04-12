@@ -54,4 +54,8 @@ const DraftCertificateSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Indexes for optimization
+DraftCertificateSchema.index({ createdBy: 1 });
+DraftCertificateSchema.index({ status: 1, department: 1 });
+
 export default mongoose.model('DraftCertificate', DraftCertificateSchema);

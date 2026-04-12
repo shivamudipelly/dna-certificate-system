@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { authAPI, setAuthToken, getStoredToken } from '../services/api';
 import toast from 'react-hot-toast';
 import type { AdminUser, AuthLoginResponse, AuthProfileResponse } from '../types';
@@ -29,6 +29,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         restoreSession();
 
         return () => window.removeEventListener('auth:expired', clearAuth);
+    }, []);
+
+    const logout = useCallback(() => {
+        setAuthToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        // Dispatch event for UI reaction if necessary
+        window.dispatchEvent(new CustomEvent('auth:logout'));
     }, []);
 
     const restoreSession = async () => {
@@ -69,14 +77,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    const logout = () => {
-        setAuthToken(null);
-        setUser(null);
-        setIsAuthenticated(false);
-    };
+    // useMemo prevents the Context from returning a new object reference on every root render, blocking full-DOM repaints
+    const value = useMemo(() => ({
+        user, isAuthenticated, isLoading, login, logout
+    }), [user, isAuthenticated, isLoading]);
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );

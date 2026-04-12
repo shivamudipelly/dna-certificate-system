@@ -9,10 +9,24 @@ export const errorHandler = (err, req, res, next) => {
         userAgent: req.get('User-Agent')
     });
 
-    const statusCode = err.status || err.statusCode || 500;
+    let statusCode = err.status || err.statusCode || 500;
+    let message = err.message || 'Internal Server Error';
+
+    // Handle common mongoose errors
+    if (err.name === 'CastError') {
+        statusCode = 400;
+        message = `Resource not found with that ID: ${err.value}`;
+    }
+
+    if (err.name === 'ValidationError') {
+        statusCode = 400;
+        message = Object.values(err.errors).map(val => val.message).join(', ');
+    }
 
     // Sanitize 500s completely to prevent internal metric leaking
-    const message = statusCode === 500 ? 'Internal Server Error' : (err.message || 'Internal Server Error');
+    if (statusCode === 500) {
+        message = 'Internal Server Error';
+    }
 
     res.status(statusCode).json({
         success: false,

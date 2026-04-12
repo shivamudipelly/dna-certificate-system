@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 const departments = ['CSE', 'ECE', 'EEE', 'ME', 'CE', 'IT', 'AI&ML', 'DS'];
 import { useAuth } from '../../context/AuthContext';
 import { Icons } from '../../components/Icons';
@@ -99,15 +99,15 @@ export default function ManageUsers() {
     const [editUser, setEditUser] = useState<User | null>(null);
     const [deleteUser, setDeleteUserTarget] = useState<User | null>(null);
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         try {
             const res: any = await api.get('/auth/users');
             setUsers(res.users);
         } catch (err: any) { toast.error(err.error || 'Failed to load users'); }
         finally { setLoading(false); }
-    };
+    }, []);
 
-    useEffect(() => { fetchUsers(); }, []);
+    useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();

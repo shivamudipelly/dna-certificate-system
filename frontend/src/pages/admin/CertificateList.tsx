@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { certificateAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -51,7 +51,7 @@ export default function CertificateList() {
     const isSuperAdmin = user?.role === 'SuperAdmin';
 
 
-    const fetchCerts = async (page: number) => {
+    const fetchCerts = useCallback(async (page: number) => {
         setIsLoading(true);
         try {
             const res: CertificateListResponse = await certificateAPI.listMe(page);
@@ -65,9 +65,9 @@ export default function CertificateList() {
             }
         } catch { toast.error('Failed to load certificates'); }
         finally { setIsLoading(false); }
-    };
+    }, []);
 
-    useEffect(() => { fetchCerts(1); }, []);
+    useEffect(() => { fetchCerts(1); }, [fetchCerts]);
 
     const runHealthCheck = async () => {
         setIsCheckingHealth(true);
@@ -161,16 +161,18 @@ export default function CertificateList() {
         }
     };
 
-    const filtered = certificates
-        .filter(c => {
-            const searchLower = search.toLowerCase();
-            const matchSearch = String(c.public_id).toLowerCase().includes(searchLower) ||
-                (c.student_name && c.student_name.toLowerCase().includes(searchLower)) ||
-                (c.roll_number && c.roll_number.toLowerCase().includes(searchLower));
-            const matchStatus = filterStatus === 'ALL' || c.status?.toLowerCase() === filterStatus.toLowerCase();
-            return matchSearch && matchStatus;
-        })
-        .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime());
+    const filtered = useMemo(() => {
+        return certificates
+            .filter(c => {
+                const searchLower = search.toLowerCase();
+                const matchSearch = String(c.public_id).toLowerCase().includes(searchLower) ||
+                    (c.student_name && c.student_name.toLowerCase().includes(searchLower)) ||
+                    (c.roll_number && c.roll_number.toLowerCase().includes(searchLower));
+                const matchStatus = filterStatus === 'ALL' || c.status?.toLowerCase() === filterStatus.toLowerCase();
+                return matchSearch && matchStatus;
+            })
+            .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime());
+    }, [certificates, search, filterStatus]);
 
     const executeRevoke = async () => {
         if (!selected) return;

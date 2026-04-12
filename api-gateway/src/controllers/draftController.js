@@ -83,6 +83,9 @@ export const editDraft = async (req, res, next) => {
 export const getDrafts = async (req, res, next) => {
     try {
         let query = {};
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = 50;
+
         if (req.admin.role === 'Clerk') {
             query = { createdBy: req.admin._id };
         } else if (req.admin.role === 'HOD') {
@@ -96,9 +99,14 @@ export const getDrafts = async (req, res, next) => {
 
         const drafts = await DraftCertificate.find(query)
             .populate('createdBy', 'email role')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean();
 
-        res.status(200).json({ success: true, drafts });
+        const total = await DraftCertificate.countDocuments(query);
+
+        res.status(200).json({ success: true, drafts, page, total });
     } catch (error) { next(error); }
 };
 
@@ -217,7 +225,6 @@ export const revertToHOD = async (req, res, next) => {
 export const approveDraft = async (req, res, next) => {
     try {
         const draft = await DraftCertificate.findById(req.params.id);
-        console.log(draft);
         if (!draft) return res.status(404).json({ success: false, error: 'Draft not found' });
 
         if (draft.status !== 'Verified') {
@@ -235,44 +242,43 @@ export const approveDraft = async (req, res, next) => {
 
         logger.info(`[Draft Controller] Approving and passing to Crypto Engine... [ReqID: ${req.id}]`);
         const { dna_payload, chaotic_seed } = await pythonService.encryptCertificate(certificateData);
-        console.log('dna payload: ', dna_payload);
-        console.log('seed: ', chaotic_seed);
+        // Optimization: Removing redundant console.logs in production
         const public_id = uuidv4().replace(/-/g, '').substring(0, 10);
 
         // Compute SHA-256 tamper-proof hash (required by Certificate schema)
         const hashPayloadString = `${certificateData.name}|${certificateData.roll}|${certificateData.degree}|${certificateData.department}|${certificateData.cgpa}|${certificateData.year}`;
         const certificate_hash = crypto.createHash('sha256').update(hashPayloadString).digest('hex');
 
-        await Certificate.create({
-            public_id,
-            student_name: certificateData.name,
-            roll_number: certificateData.roll,
-            department: certificateData.department,
-            degree: certificateData.degree,
-            cgpa: certificateData.cgpa,
-            year: certificateData.year,
-            dna_payload,
-            chaotic_seed,
-            certificate_hash,
-            issued_by: req.admin._id
-        });
+        const verification_url = qrService.getVerificationUrl(public_id);
 
-        // SECURE ERASURE: Delete the draft immediately so PII never stays in DB
-        await DraftCertificate.findByIdAndDelete(draft._id);
+        // Maximum Optimization: Parallel Execution of 4 I/O bottleneck operations (Create, Delete, Logs, QR)
+        const [ , , , qr_code] = await Promise.all([
+            Certificate.create({
+                public_id,
+                student_name: certificateData.name,
+                roll_number: certificateData.roll,
+                department: certificateData.department,
+                degree: certificateData.degree,
+                cgpa: certificateData.cgpa,
+                year: certificateData.year,
+                dna_payload,
+                chaotic_seed,
+                certificate_hash,
+                issued_by: req.admin._id
+            }),
+            DraftCertificate.findByIdAndDelete(draft._id),
+            AuditLog.create({
+                action: 'DRAFT_APPROVED',
+                adminId: req.admin._id,
+                targetId: public_id,
+                details: `SuperAdmin approved draft ${draft._id} and permanently minted Certificate ${public_id}`,
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent')
+            }),
+            qrService.generateQRCode(verification_url)
+        ]);
 
         auditLog('DRAFT_APPROVED', req.id, 201, `Draft ${draft._id} approved and encrypted into Certificate ${public_id}`, req.ip, req.get('User-Agent'));
-
-        await AuditLog.create({
-            action: 'DRAFT_APPROVED',
-            adminId: req.admin._id,
-            targetId: public_id,
-            details: `SuperAdmin approved draft ${draft._id} and permanently minted Certificate ${public_id}`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
-        });
-
-        const verification_url = qrService.getVerificationUrl(public_id);
-        const qr_code = await qrService.generateQRCode(verification_url);
 
         res.status(200).json({
             success: true,

@@ -29,8 +29,8 @@ export const register = async (req, res, next) => {
             return sendError(res, 400, 'Invalid role assignment');
         }
 
-        // 2. Check Exists
-        const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
+        // 2. Check Exists (Optimized: Using .exists() is mathematically faster than .findOne() as it doesn't load document data)
+        const existingAdmin = await Admin.exists({ email: email.toLowerCase() });
         if (existingAdmin) {
             return sendError(res, 400, 'The provided email is already registered to an Admin account.');
         }
@@ -43,7 +43,7 @@ export const register = async (req, res, next) => {
             department
         });
 
-        console.info(`[Auth Event] New Admin Registered - ID: ${admin._id} Role: ${admin.role}`);
+        logger.info(`[Auth Event] New Admin Registered - ID: ${admin._id} Role: ${admin.role}`);
 
         res.status(201).json({
             success: true,
@@ -111,7 +111,8 @@ export const login = async (req, res, next) => {
 export const getProfile = async (req, res, next) => {
     try {
         // req.admin is safely extracted mathematically from the token by `authMiddleware.js protect()`
-        const admin = await Admin.findById(req.admin._id).select('-passwordHash'); // Ensures BCrypt strings never leak out dynamically
+        // Optimized: Adding .lean() drastically reduces memory overhead since we only serialize the output
+        const admin = await Admin.findById(req.admin._id).select('-passwordHash').lean(); 
 
         res.status(200).json({
             success: true,
@@ -124,7 +125,7 @@ export const getProfile = async (req, res, next) => {
 
 export const getAllUsers = async (req, res, next) => {
     try {
-        const users = await Admin.find().select('-passwordHash').sort({ createdAt: -1 });
+        const users = await Admin.find().select('-passwordHash').sort({ createdAt: -1 }).lean();
 
         res.status(200).json({
             success: true,

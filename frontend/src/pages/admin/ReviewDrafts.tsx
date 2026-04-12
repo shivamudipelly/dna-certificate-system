@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { draftAPI } from '../../services/api';
@@ -138,7 +138,7 @@ export default function ReviewDrafts() {
         { open: false, title: '', onSubmit: () => { } }
     );
 
-    const fetchDrafts = async () => {
+    const fetchDrafts = useCallback(async () => {
         try {
             const res: any = await draftAPI.list();
             setDrafts(res.drafts ?? []);
@@ -147,9 +147,9 @@ export default function ReviewDrafts() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchDrafts(); }, []);
+    useEffect(() => { fetchDrafts(); }, [fetchDrafts]);
 
     // ── Clerk actions ──────────────────────────────────────────────────────
     const handleSubmitToHOD = async (id: string) => {

@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { configureEnvironment } from '../config/index.js';
+import { logger } from '../utils/logger.js';
 
 const config = configureEnvironment();
 
@@ -15,7 +16,7 @@ export const qrService = {
                 margin: 2
             });
         } catch (error) {
-            console.error(`💥 [QR Generation Error] Generation Failed: ${error.message}`);
+            logger.error(`💥 [QR Generation Error] Generation Failed: ${error.message}`);
             throw new Error('Failed to generate validation QR code.');
         }
     },
