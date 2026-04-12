@@ -88,8 +88,27 @@ app.use(express.json({ limit: '10kb' }));
 
 
 // 5. Setup Routes
+
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'API Gateway', timestamp: new Date().toISOString() });
+    res.status(200).json({ status: 'live', service: 'API Gateway', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health/crypto', async (req, res) => {
+    if (!config.cryptoEngineUrl) {
+        return res.status(200).json({ status: 'live', note: 'No crypto engine URL configured in gateway' });
+    }
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        
+        const response = await fetch(`${config.cryptoEngineUrl}/health`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (error) {
+        res.status(503).json({ status: 'unavailable', service: 'Crypto Engine', message: error.message || 'Engine asleep' });
+    }
 });
 
 app.use('/api/auth', authRoutes);

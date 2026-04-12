@@ -35,8 +35,9 @@ function DnaHelix() {
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
+        // Ensure width and height are greater than 0 to prevent division by zero (NaN) errors during resize loops
+        canvas.width = Math.max(canvas.offsetWidth, 100);
+        canvas.height = Math.max(canvas.offsetHeight, 100);
         let t = 0;
         let raf: number;
         const draw = () => {
@@ -82,7 +83,7 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+    const [errors, setErrors] = useState<{ email?: string; password?: string; global?: string }>({});
 
     useEffect(() => { document.title = 'Admin Login · University Verification System'; }, []);
     useEffect(() => { if (!authLoading && isAuthenticated) navigate('/admin/dashboard', { replace: true }); }, [isAuthenticated, authLoading]);
@@ -102,13 +103,14 @@ export default function Login() {
         if (!validate()) return;
         setLoading(true);
         try {
-            await login(email.trim(), password);
+            const res = await login(email.trim(), password);
+            if (!res.success) {
+                throw new Error(res.error);
+            }
             toast.success('Welcome back!');
             navigate('/admin/dashboard', { replace: true });
         } catch (err: any) {
-            const msg = err?.error || err?.message || 'Invalid credentials';
-            toast.error(msg);
-            setErrors({ password: msg });
+            setErrors({ global: 'The email address or password you entered is incorrect.' });
         } finally {
             setLoading(false);
         }
@@ -202,6 +204,24 @@ export default function Login() {
                     </div>
 
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        {/* Global Error Banner */}
+                        {errors.global && (
+                            <div style={{
+                                padding: '12px 16px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px',
+                                color: '#f87171',
+                                fontSize: '0.9rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                <span>{errors.global}</span>
+                            </div>
+                        )}
+
                         {/* Email */}
                         <div className="form-group">
                             <label className="form-label" htmlFor="email">Email address</label>
@@ -214,7 +234,7 @@ export default function Login() {
                                     className={`form-input${errors.email ? ' error' : ''}`}
                                     placeholder="admin@university.edu"
                                     value={email}
-                                    onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: undefined })); }}
+                                    onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: undefined, global: undefined })); }}
                                     autoComplete="email"
                                     style={{ paddingLeft: 44 }}
                                 />
@@ -235,7 +255,7 @@ export default function Login() {
                                     className={`form-input${errors.password ? ' error' : ''}`}
                                     placeholder="••••••••"
                                     value={password}
-                                    onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: undefined })); }}
+                                    onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: undefined, global: undefined })); }}
                                     autoComplete="current-password"
                                     style={{ paddingLeft: 44, paddingRight: 44 }}
                                 />

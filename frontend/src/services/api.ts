@@ -62,9 +62,12 @@ api.interceptors.response.use(
         console.error('[API Error Body]:', response.data);
 
         if (response.status === 401) {
-            setAuthToken(null);
-            window.dispatchEvent(new CustomEvent('auth:expired'));
-            return Promise.reject({ success: false, error: 'Session expired. Please log in again.' });
+            if (error.config && error.config.url && !error.config.url.includes('/auth/login')) {
+                setAuthToken(null);
+                window.dispatchEvent(new CustomEvent('auth:expired'));
+                return Promise.reject({ success: false, error: 'Session expired. Please log in again.' });
+            }
+            return Promise.reject({ success: false, error: response.data?.error || 'Invalid credentials' });
         }
         if (response.status === 403) {
             return Promise.reject({ success: false, error: response.data?.error || 'Access forbidden.' });
@@ -107,5 +110,8 @@ export const userAPI = {
     edit: (id: string, data: { role?: string; department?: string }): Promise<any> => api.put(`/auth/users/${id}`, data),
     delete: (id: string): Promise<any> => api.delete(`/auth/users/${id}`),
 };
+
+export const apiGatewayHealth = (): Promise<any> => api.get('/health');
+export const cryptoEngineHealth = (): Promise<any> => api.get('/health/crypto');
 
 export default api;
