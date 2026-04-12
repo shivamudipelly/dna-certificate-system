@@ -5,7 +5,13 @@ interface ServerBootstrapperProps {
     children: React.ReactNode;
 }
 
-type Status = 'checking' | 'waking' | 'online';
+interface ServiceStatus {
+    type: 'checking' | 'waking' | 'online';
+    uptime?: number;
+    functional?: boolean;
+    version?: string;
+    message?: string;
+}
 
 const SESSION_KEY = 'dna_server_awake';
 
@@ -13,8 +19,8 @@ const ServerBootstrapper: React.FC<ServerBootstrapperProps> = ({ children }) => 
     // If the session says it's awake, we initialize states as 'online' instantly.
     const isAwakeSession = sessionStorage.getItem(SESSION_KEY) === 'true';
     
-    const [gatewayStatus, setGatewayStatus] = useState<Status>(isAwakeSession ? 'online' : 'checking');
-    const [cryptoStatus, setCryptoStatus] = useState<Status>(isAwakeSession ? 'online' : 'checking');
+    const [gatewayStatus, setGatewayStatus] = useState<ServiceStatus>({ type: isAwakeSession ? 'online' : 'checking' });
+    const [cryptoStatus, setCryptoStatus] = useState<ServiceStatus>({ type: isAwakeSession ? 'online' : 'checking' });
     const [showLoader, setShowLoader] = useState(false);
 
     useEffect(() => {
@@ -26,8 +32,8 @@ const ServerBootstrapper: React.FC<ServerBootstrapperProps> = ({ children }) => 
         const handleServerOffline = () => {
             sessionStorage.removeItem(SESSION_KEY);
             if (mounted) {
-                setGatewayStatus('checking');
-                setCryptoStatus('checking');
+                setGatewayStatus({ type: 'checking' });
+                setCryptoStatus({ type: 'checking' });
                 setShowLoader(true);
                 initiateChecks(); // Restart checks
             }
@@ -43,12 +49,15 @@ const ServerBootstrapper: React.FC<ServerBootstrapperProps> = ({ children }) => 
         // Exponential backoff so we don't bombard the sleeping server if 10,000 users launch at once
         const pingGateway = async (attempt = 1) => {
             try {
-                await apiGatewayHealth();
-                if (mounted) setGatewayStatus('online');
-            } catch (error) {
+                const data = await apiGatewayHealth();
+                if (mounted) setGatewayStatus({ 
+                    type: 'online', 
+                    uptime: data.uptime, 
+                    version: data.version 
+                });
+            } catch (error: any) {
                 if (mounted) {
-                    setGatewayStatus('waking');
-                    // Backoff: 3s -> 6s -> 9s (maxes at 15s)
+                    setGatewayStatus({ type: 'waking', message: error.error || 'Starting Node.js Gateway...' });
                     const waitTime = Math.min(attempt * 3000, 15000);
                     setTimeout(() => pingGateway(attempt + 1), waitTime);
                 }
@@ -57,11 +66,17 @@ const ServerBootstrapper: React.FC<ServerBootstrapperProps> = ({ children }) => 
 
         const pingCrypto = async (attempt = 1) => {
             try {
-                await cryptoEngineHealth();
-                if (mounted) setCryptoStatus('online');
-            } catch (error) {
+                const data = await cryptoEngineHealth();
+                if (mounted) setCryptoStatus({ 
+                    type: 'online', 
+                    uptime: data.uptime, 
+                    functional: data.functional,
+                    version: data.version
+                });
+            } catch (error: any) {
                 if (mounted) {
-                    setCryptoStatus('waking');
+                    const msg = error.is_cold_start ? 'Waking up Python Engine...' : 'Verifying Cryptography Pipeline...';
+                    setCryptoStatus({ type: 'waking', message: msg });
                     const waitTime = Math.min(attempt * 3000, 15000);
                     setTimeout(() => pingCrypto(attempt + 1), waitTime); 
                 }
@@ -86,7 +101,7 @@ const ServerBootstrapper: React.FC<ServerBootstrapperProps> = ({ children }) => 
         };
     }, [isAwakeSession]);
 
-    const isReady = gatewayStatus === 'online' && cryptoStatus === 'online';
+    const isReady = gatewayStatus.type === 'online' && cryptoStatus.type === 'online';
 
     // Store in session once both hit online
     useEffect(() => {
@@ -164,23 +179,37 @@ const ServerBootstrapper: React.FC<ServerBootstrapperProps> = ({ children }) => 
                 borderRadius: '12px',
                 padding: '1.5rem',
                 width: '100%',
-                maxWidth: '380px',
+                maxWidth: '430px',
                 textAlign: 'left'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <StatusIcon status={gatewayStatus} />
-                        <span style={{ fontWeight: 500 }}>API Gateway (Node)</span>
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <StatusIcon status={gatewayStatus.type} />
+                            <span style={{ fontWeight: 500 }}>API Core (Node.js)</span>
+                        </div>
+                        <StatusText status={gatewayStatus} />
                     </div>
-                    <StatusText status={gatewayStatus} />
+                    {gatewayStatus.type === 'online' && (
+                        <div style={{ marginLeft: '1.75rem', fontSize: '0.75rem', color: 'var(--c-text-muted, #9ca3af)' }}>
+                            Uptime: {gatewayStatus.uptime}s • v{gatewayStatus.version}
+                        </div>
+                    )}
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <StatusIcon status={cryptoStatus} />
-                        <span style={{ fontWeight: 500 }}>Cryptography Engine</span>
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <StatusIcon status={cryptoStatus.type} />
+                            <span style={{ fontWeight: 500 }}>Secure Cryptography (Python)</span>
+                        </div>
+                        <StatusText status={cryptoStatus} />
                     </div>
-                    <StatusText status={cryptoStatus} />
+                    {cryptoStatus.type === 'online' && (
+                        <div style={{ marginLeft: '1.75rem', fontSize: '0.75rem', color: 'var(--c-text-muted, #9ca3af)' }}>
+                            Uptime: {cryptoStatus.uptime}s • Pipeline: {cryptoStatus.functional ? 'Functional ✅' : 'Failed ❌'}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -202,7 +231,7 @@ const ServerBootstrapper: React.FC<ServerBootstrapperProps> = ({ children }) => 
 };
 
 // Helper components for the checklist UI
-const StatusIcon = ({ status }: { status: Status }) => {
+const StatusIcon = ({ status }: { status: ServiceStatus['type'] }) => {
     if (status === 'online') {
         return (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -222,9 +251,14 @@ const StatusIcon = ({ status }: { status: Status }) => {
     );
 }
 
-const StatusText = ({ status }: { status: Status }) => {
-    if (status === 'online') return <span style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>ONLINE</span>;
-    if (status === 'waking') return <span style={{ color: '#fbbf24', fontSize: '0.85rem', fontWeight: 600, animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>WAKING UP</span>;
+const StatusText = ({ status }: { status: ServiceStatus }) => {
+    if (status.type === 'online') return <span style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>ONLINE</span>;
+    if (status.type === 'waking') return (
+        <div style={{ textAlign: 'right' }}>
+            <div style={{ color: '#fbbf24', fontSize: '0.85rem', fontWeight: 600, animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>WAKING UP</div>
+            <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>{status.message}</div>
+        </div>
+    );
     return <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>CHECKING...</span>;
 }
 

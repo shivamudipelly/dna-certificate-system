@@ -58,7 +58,9 @@ api.interceptors.response.use(
             return Promise.reject({ success: false, error: 'Network connection failed. Check your connection.' });
         }
 
-        window.dispatchEvent(new CustomEvent('server:online'));
+        if (response.status < 500) {
+            window.dispatchEvent(new CustomEvent('server:online'));
+        }
         console.error('[API Error Body]:', response.data);
 
         if (response.status === 401) {
