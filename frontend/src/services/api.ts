@@ -108,4 +108,6 @@ export const userAPI = {
     delete: (id: string): Promise<any> => api.delete(`/auth/users/${id}`),
 };
 
+
+
 export default api;
