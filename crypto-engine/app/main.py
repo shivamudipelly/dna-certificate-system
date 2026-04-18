@@ -122,37 +122,7 @@ async def health_check(request: Request):
         "uptime": round(uptime, 2)
     }
 
-@app.get("/health/deep")
-@limiter.limit("50/minute")
-async def deep_health_check(request: Request):
-    """
-    Perform a functional test of the encryption pipeline to ensure
-    keys are loaded and the math logic is operational.
-    """
-    uptime = time.time() - app_start_time
-    try:
-        # Perform a tiny functional test (no-op encryption)
-        test_data = {"test": "health_check", "ts": time.time()}
-        result = crypto_orchestrator.full_encrypt(test_data)
-        
-        return {
-            "status": "ok",
-            "functional": True,
-            "engine": "verified",
-            "uptime": round(uptime, 2),
-            "test_payload_size": len(result["dna_payload"])
-        }
-    except Exception as e:
-        logger.error(f"Deep Health Check failed: {str(e)}")
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={
-                "status": "error",
-                "functional": False,
-                "message": "Cryptographic pipeline verification failed",
-                "uptime": round(uptime, 2)
-            }
-        )
+
 
 @app.post("/encrypt", response_model=EncryptResponse)
 @limiter.limit("100/minute")

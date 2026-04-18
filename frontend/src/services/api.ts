@@ -48,19 +48,14 @@ api.interceptors.request.use(
 // Response interceptor — unified error handling
 api.interceptors.response.use(
     (response) => {
-        window.dispatchEvent(new CustomEvent('server:online'));
         return response.data;
     },
     (error) => {
         const { response } = error;
         if (!response) {
-            window.dispatchEvent(new CustomEvent('server:offline'));
             return Promise.reject({ success: false, error: 'Network connection failed. Check your connection.' });
         }
 
-        if (response.status < 500) {
-            window.dispatchEvent(new CustomEvent('server:online'));
-        }
         console.error('[API Error Body]:', response.data);
 
         if (response.status === 401) {
@@ -112,8 +107,5 @@ export const userAPI = {
     edit: (id: string, data: { role?: string; department?: string }): Promise<any> => api.put(`/auth/users/${id}`, data),
     delete: (id: string): Promise<any> => api.delete(`/auth/users/${id}`),
 };
-
-export const apiGatewayHealth = (): Promise<any> => api.get('/health');
-export const cryptoEngineHealth = (): Promise<any> => api.get('/health/crypto');
 
 export default api;

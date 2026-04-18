@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 import { AuthProvider } from './context/AuthContext'
-import ServerBootstrapper from './components/ServerBootstrapper'
 
 if (import.meta.env.MODE === 'production') {
     if (typeof window !== 'undefined' && (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__) {
@@ -15,9 +14,7 @@ if (import.meta.env.MODE === 'production') {
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
         <AuthProvider>
-            <ServerBootstrapper>
-                <App />
-            </ServerBootstrapper>
+            <App />
         </AuthProvider>
     </BrowserRouter>,
 )

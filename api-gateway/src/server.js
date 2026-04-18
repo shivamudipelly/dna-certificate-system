@@ -100,54 +100,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-app.get('/api/health/crypto', async (req, res) => {
-    if (!config.cryptoEngineUrl) {
-        return res.status(503).json({ 
-            status: 'unconfigured', 
-            service: 'Crypto Engine', 
-            error: 'CRYPTO_ENGINE_URL environment variable is missing in Gateway.' 
-        });
-    }
-    
-    try {
-        const controller = new AbortController();
-        // Set internal fetch timeout to 20s (Gateway global limit is 30s)
-        // This allows us to return a nice JSON response before the middleware kills the request.
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-        
-        const response = await fetch(`${config.cryptoEngineUrl}/health/deep`, { 
-            signal: controller.signal,
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        clearTimeout(timeoutId);
-        
-        const data = await response.json();
-        
-        // If engine is waking up (e.g. 503 from Render), we also report it clearly
-        if (response.status >= 500) {
-            return res.status(503).json({
-                status: 'waking',
-                service: 'Crypto Engine',
-                message: 'Engine is currently starting up (Cold Start)',
-                detail: data
-            });
-        }
 
-        res.status(response.status).json({
-            ...data,
-            gateway_observed_at: new Date().toISOString()
-        });
-    } catch (error) {
-        const isTimeout = error.name === 'AbortError';
-        res.status(503).json({ 
-            status: 'unavailable', 
-            service: 'Crypto Engine', 
-            message: isTimeout ? 'Engine connection timed out (20s)' : (error.message || 'Engine unreachable'),
-            is_cold_start: isTimeout
-        });
-    }
-});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/certificates', certificateRoutes);

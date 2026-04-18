@@ -110,7 +110,8 @@ export default function Login() {
             toast.success('Welcome back!');
             navigate('/admin/dashboard', { replace: true });
         } catch (err: any) {
-            setErrors({ global: 'The email address or password you entered is incorrect.' });
+            const errorMessage = err?.error || err?.message || 'The email address or password you entered is incorrect.';
+            setErrors({ global: errorMessage });
         } finally {
             setLoading(false);
         }
